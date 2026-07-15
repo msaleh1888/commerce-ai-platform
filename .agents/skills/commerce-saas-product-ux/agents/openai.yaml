@@ -1,0 +1,7 @@
+interface:
+  display_name: "Commerce SaaS Product UX"
+  short_description: "Product UX lens for commerce SaaS"
+  default_prompt: "Use $commerce-saas-product-ux to evaluate a product, UX, feature, or UI decision for the commerce AI SaaS platform."
+
+policy:
+  allow_implicit_invocation: true
