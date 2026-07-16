@@ -10,7 +10,7 @@ The repository is in Milestone M1: Technical Foundation. Current work is limited
 
 ```text
 apps/
-  api/                 FastAPI service skeleton, added in M1-02
+  api/                 FastAPI service
   web/                 Next.js web app skeleton, added in M1-03
   worker/              Celery worker skeleton, added in M1-04
 infrastructure/
@@ -26,6 +26,27 @@ docs/                  Product, UX, architecture, and planning docs
 ```
 
 Empty milestone directories contain `.gitkeep` files so the intended structure is tracked before framework code is introduced.
+
+## Local API Development
+
+The API skeleton can run locally from the repository root:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m uvicorn commerce_ai_api.main:app --reload
+```
+
+Health check:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+Run the current API test:
+
+```bash
+python -m pytest tests/unit/api
+```
 
 ## MVP Architecture Direction
 
