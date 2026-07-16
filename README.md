@@ -11,7 +11,7 @@ The repository is in Milestone M1: Technical Foundation. Current work is limited
 ```text
 apps/
   api/                 FastAPI service
-  web/                 Next.js web app skeleton, added in M1-03
+  web/                 Next.js web app
   worker/              Celery worker skeleton, added in M1-04
 infrastructure/
   docker/              Docker and local runtime support, expanded in M1-05
@@ -46,6 +46,23 @@ Run the current API test:
 
 ```bash
 python -m pytest tests/unit/api
+```
+
+## Local Web Development
+
+The web skeleton can run locally from the web app directory:
+
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+Run the current web checks:
+
+```bash
+npm run typecheck
+npm run build
 ```
 
 ## MVP Architecture Direction

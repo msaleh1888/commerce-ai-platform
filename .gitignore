@@ -6,6 +6,12 @@ __pycache__/
 .venv/
 venv/
 
+# Node
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
 # Local environment
 .env
 
