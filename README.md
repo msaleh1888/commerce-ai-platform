@@ -48,6 +48,19 @@ Run the current API test:
 python -m pytest tests/unit/api
 ```
 
+Run PostgreSQL migrations:
+
+```bash
+COMMERCE_AI_DATABASE_URL=postgresql+psycopg://commerce_ai:commerce_ai@localhost:5432/commerce_ai \
+python -m alembic -c apps/api/alembic.ini upgrade head
+```
+
+Validate migrations without a running database, suitable for CI:
+
+```bash
+python -m alembic -c apps/api/alembic.ini upgrade head --sql
+```
+
 ## Local Web Development
 
 The web skeleton can run locally from the web app directory:
