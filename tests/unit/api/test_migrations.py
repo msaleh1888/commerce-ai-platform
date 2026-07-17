@@ -11,6 +11,16 @@ def test_database_url_is_environment_driven(monkeypatch) -> None:
     assert Settings().database_url == expected_url
 
 
+def test_runtime_service_urls_are_environment_driven(monkeypatch) -> None:
+    monkeypatch.setenv("COMMERCE_AI_REDIS_URL", "redis://redis:6379/0")
+    monkeypatch.setenv("COMMERCE_AI_QDRANT_URL", "http://qdrant:6333")
+
+    settings = Settings()
+
+    assert settings.redis_url == "redis://redis:6379/0"
+    assert settings.qdrant_url == "http://qdrant:6333"
+
+
 def test_alembic_has_single_current_head() -> None:
     script_directory = ScriptDirectory.from_config(get_alembic_config())
 

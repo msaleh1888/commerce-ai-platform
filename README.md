@@ -12,9 +12,9 @@ The repository is in Milestone M1: Technical Foundation. Current work is limited
 apps/
   api/                 FastAPI service
   web/                 Next.js web app
-  worker/              Celery worker skeleton, added in M1-04
+  worker/              Celery worker
 infrastructure/
-  docker/              Docker and local runtime support, expanded in M1-05
+  docker/              Dockerfiles and local runtime docs
 datasets/
   fixtures/            Deterministic demo and evaluation fixtures
 tests/
@@ -102,6 +102,36 @@ python -m commerce_ai_worker.scripts.smoke_health
 
 Worker settings use the `COMMERCE_AI_WORKER_` environment variable prefix and are documented in [apps/worker/README.md](apps/worker/README.md).
 
+## Local Docker Runtime
+
+The full M1 runtime can start PostgreSQL, Redis, Qdrant, API, worker, and web services:
+
+```bash
+docker compose up --build
+```
+
+Run database migrations explicitly after PostgreSQL is healthy:
+
+```bash
+docker compose run --rm api python -m alembic -c apps/api/alembic.ini upgrade head
+```
+
+Smoke checks:
+
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/ready
+curl http://localhost:3000
+curl http://localhost:6333/readyz
+docker compose run --rm worker python -m commerce_ai_worker.scripts.smoke_health
+```
+
+Stop services:
+
+```bash
+docker compose down
+```
+
 ## MVP Architecture Direction
 
 The project starts as a modular monolith with separate deployable processes:
@@ -123,4 +153,4 @@ PostgreSQL is the source of truth, Qdrant is a derived retrieval index, and Redi
 
 ## Next Foundation Issues
 
-M1 continues with the FastAPI skeleton, Next.js skeleton, Celery worker skeleton, Docker Compose runtime, database migrations, CI, and fixture seed command stub.
+M1 continues with CI and the fixture data plan with seed command stub.

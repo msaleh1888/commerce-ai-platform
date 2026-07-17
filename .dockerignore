@@ -1,0 +1,15 @@
+.git
+.pytest_cache
+__pycache__
+*.py[cod]
+*.egg-info
+.venv
+venv
+
+apps/web/.next
+apps/web/node_modules
+apps/web/tsconfig.tsbuildinfo
+
+.env
+.DS_Store
+Thumbs.db

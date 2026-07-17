@@ -1,0 +1,16 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY pyproject.toml ./
+COPY apps/api ./apps/api
+COPY apps/worker ./apps/worker
+
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && python -m pip install --no-cache-dir -e ".[dev]"
+
+RUN useradd --create-home --shell /usr/sbin/nologin appuser
+USER appuser
