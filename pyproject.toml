@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Multi-tenant AI commerce operations platform."
 requires-python = ">=3.12"
 dependencies = [
+  "celery[redis]>=5.4.0,<6.0.0",
   "fastapi>=0.116.0,<1.0.0",
   "pydantic-settings>=2.10.0,<3.0.0",
   "uvicorn[standard]>=0.35.0,<1.0.0",
@@ -20,11 +21,12 @@ requires = ["setuptools>=80.0.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.package-dir]
-"" = "apps/api/src"
+"commerce_ai_api" = "apps/api/src/commerce_ai_api"
+"commerce_ai_worker" = "apps/worker/src/commerce_ai_worker"
 
 [tool.setuptools.packages.find]
-where = ["apps/api/src"]
+where = ["apps/api/src", "apps/worker/src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["apps/api/src"]
+pythonpath = ["apps/api/src", "apps/worker/src"]
