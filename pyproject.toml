@@ -4,9 +4,12 @@ version = "0.1.0"
 description = "Multi-tenant AI commerce operations platform."
 requires-python = ">=3.12"
 dependencies = [
+  "alembic>=1.16.0,<2.0.0",
   "celery[redis]>=5.4.0,<6.0.0",
   "fastapi>=0.116.0,<1.0.0",
+  "psycopg[binary]>=3.2.0,<4.0.0",
   "pydantic-settings>=2.10.0,<3.0.0",
+  "sqlalchemy>=2.0.0,<3.0.0",
   "uvicorn[standard]>=0.35.0,<1.0.0",
 ]
 
@@ -19,6 +22,9 @@ dev = [
 [build-system]
 requires = ["setuptools>=80.0.0"]
 build-backend = "setuptools.build_meta"
+
+[project.scripts]
+commerce-ai-validate-migrations = "commerce_ai_api.db.migrations:validate_migrations"
 
 [tool.setuptools.package-dir]
 "commerce_ai_api" = "apps/api/src/commerce_ai_api"

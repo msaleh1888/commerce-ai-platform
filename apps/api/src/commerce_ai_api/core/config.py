@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     api_name: str = "Commerce AI API"
     api_version: str = "0.1.0"
     log_level: str = "INFO"
+    database_url: str = "postgresql+psycopg://commerce_ai:commerce_ai@localhost:5432/commerce_ai"
 
     model_config = SettingsConfigDict(
         env_file=".env",
