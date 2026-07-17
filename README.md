@@ -65,6 +65,30 @@ npm run typecheck
 npm run build
 ```
 
+## Local Worker Development
+
+The worker skeleton can run locally from the repository root:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m celery -A commerce_ai_worker.celery_app:celery_app worker --loglevel=INFO
+```
+
+With Redis running, enqueue the health task from another terminal:
+
+```bash
+python -m commerce_ai_worker.scripts.smoke_health
+```
+
+Until the Docker Compose runtime is added in M1-05, the same task can be smoke-tested inline:
+
+```bash
+$env:COMMERCE_AI_WORKER_TASK_ALWAYS_EAGER="true"
+python -m commerce_ai_worker.scripts.smoke_health
+```
+
+Worker settings use the `COMMERCE_AI_WORKER_` environment variable prefix and are documented in [apps/worker/README.md](apps/worker/README.md).
+
 ## MVP Architecture Direction
 
 The project starts as a modular monolith with separate deployable processes:
