@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     api_version: str = "0.1.0"
     log_level: str = "INFO"
     database_url: str = "postgresql+psycopg://commerce_ai:commerce_ai@localhost:5432/commerce_ai"
+    redis_url: str = "redis://localhost:6379/0"
+    qdrant_url: str = "http://localhost:6333"
 
     model_config = SettingsConfigDict(
         env_file=".env",

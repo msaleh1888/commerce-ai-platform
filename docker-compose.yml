@@ -1,0 +1,117 @@
+name: commerce-ai-platform
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: commerce_ai
+      POSTGRES_USER: commerce_ai
+      POSTGRES_PASSWORD: commerce_ai
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U commerce_ai -d commerce_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:v1.15.5
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/api.Dockerfile
+    environment:
+      COMMERCE_AI_ENVIRONMENT: docker
+      COMMERCE_AI_DATABASE_URL: postgresql+psycopg://commerce_ai:commerce_ai@postgres:5432/commerce_ai
+      COMMERCE_AI_REDIS_URL: redis://redis:6379/0
+      COMMERCE_AI_QDRANT_URL: http://qdrant:6333
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    command:
+      [
+        "python",
+        "-m",
+        "uvicorn",
+        "commerce_ai_api.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+      ]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3)\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/worker.Dockerfile
+    environment:
+      COMMERCE_AI_WORKER_ENVIRONMENT: docker
+      COMMERCE_AI_WORKER_BROKER_URL: redis://redis:6379/0
+      COMMERCE_AI_WORKER_RESULT_BACKEND: redis://redis:6379/1
+      COMMERCE_AI_WORKER_TASK_DEFAULT_QUEUE: commerce_ai
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    command:
+      [
+        "python",
+        "-m",
+        "celery",
+        "-A",
+        "commerce_ai_worker.celery_app:celery_app",
+        "worker",
+        "--loglevel=INFO",
+      ]
+
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/web.Dockerfile
+    environment:
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
+
+volumes:
+  postgres_data:
+  qdrant_data:
