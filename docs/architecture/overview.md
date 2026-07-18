@@ -1,8 +1,18 @@
 # Architecture Overview
 
-## Current Architectural Intent
+## Architecture Contract
 
-The project starts as a modular monolith with separate worker processes. This keeps product development fast while preserving clear domain boundaries and production-like async behavior.
+The approved architecture is a modular monolith with separate web, API, worker, and migration runtimes. This page is an orientation map only. Binding implementation rules live in:
+
+- [Architecture Governance](architecture-governance.md)
+- [Final Target Architecture](final-target-architecture.md)
+- [Canonical Backend Architecture](canonical-backend-architecture.md)
+- [Canonical Frontend Architecture](canonical-frontend-architecture.md)
+- [Architecture Implementation Standards](implementation-guide.md)
+
+Every implementation must also follow the relevant domain contract and accepted ADRs.
+
+The governing adoption decision is [ADR 0007](adr/0007-architecture-governance-and-canonical-boundaries.md).
 
 ## MVP System Diagram
 
@@ -29,19 +39,21 @@ flowchart TD
 - scheduler: optional Celery Beat process for scheduled evaluation or maintenance.
 - migration: one-shot database migration command.
 
-## Initial Domain Modules
+## Canonical Domain Modules
 
-- identity: users, sessions, authentication.
-- tenancy: tenants, memberships, roles, permissions.
-- catalogs: sources, imports, rows, status.
-- products: supplier products, canonical products, variants, attributes.
-- ingestion: parsing, validation, normalization, idempotency.
-- retrieval: indexing, search, fusion, filters, evidence.
-- matching: duplicate candidates, confidence, review cases.
-- approvals: human decisions and mutation execution.
-- evaluation: datasets, runs, metrics, reports.
-- audit: append-only operational history.
-- observability: logs, health checks, metrics hooks.
+- identity: users, credentials, sessions.
+- tenancy: tenants, memberships, roles, tenant context.
+- catalog_ingestion: sources, imports, rows, artifacts, content hashes, state.
+- normalization: transformation rules and outcomes.
+- catalog: supplier products, canonical products, variants, provenance.
+- retrieval: projections, indexing, lexical/dense/hybrid search, evidence.
+- matching: duplicate candidates, signals, confidence.
+- review: review cases and decisions.
+- approval: authorized risky mutation execution and idempotency.
+- audit: append-only product audit events.
+- evaluation: manifests, runs, metrics, artifacts.
+- ai: provider adapters and validated proposals.
+- observability: correlation, telemetry, redaction policy.
 
 ## Source of Truth
 
@@ -71,14 +83,11 @@ AI components may assist with embeddings, similarity, recommendations, explanati
 
 The MVP begins with structured logs, health checks, task status, and basic metrics hooks. Full OpenTelemetry, Prometheus, Grafana, and Langfuse are deferred until core workflows work.
 
-## Later Architecture Additions
+## Domain Contracts
 
-- Separate MCP server.
-- LangGraph agent worker.
-- Memory module.
-- Full telemetry stack.
-- Kubernetes deployment.
-- Real integration adapters.
-
-These additions should be gated by measured product value and implementation readiness.
-
+- [Catalog Ingestion Contract](catalog-ingestion-contract.md)
+- [Retrieval and Indexing Contract](retrieval-and-indexing-contract.md)
+- [Duplicate Review and Approval Contract](duplicate-review-and-approval-contract.md)
+- [Evaluation Contract](evaluation-contract.md)
+- [AI, Agent, and MCP Contract](ai-agent-and-mcp-contract.md)
+- [Observability and Operations Contract](observability-and-operations-contract.md)

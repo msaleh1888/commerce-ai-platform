@@ -1,0 +1,4 @@
+interface:
+  display_name: "Commerce Platform Architecture"
+  short_description: "Enforce the platform architecture contract"
+  default_prompt: "Implement this change in strict compliance with the commerce platform architecture contract."
