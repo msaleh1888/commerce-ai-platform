@@ -61,6 +61,18 @@ Validate migrations without a running database, suitable for CI:
 python -m alembic -c apps/api/alembic.ini upgrade head --sql
 ```
 
+Preview the demo seed fixture without writing to services:
+
+```bash
+python -m commerce_ai_api.scripts.seed_demo
+```
+
+After installing the project in editable mode, the console script is also available:
+
+```bash
+commerce-ai-seed-demo
+```
+
 ## Local Web Development
 
 The web skeleton can run locally from the web app directory:

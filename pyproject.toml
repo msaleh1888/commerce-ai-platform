@@ -26,6 +26,7 @@ build-backend = "setuptools.build_meta"
 
 [project.scripts]
 commerce-ai-validate-migrations = "commerce_ai_api.db.migrations:validate_migrations"
+commerce-ai-seed-demo = "commerce_ai_api.scripts.seed_demo:main"
 
 [tool.setuptools.package-dir]
 "commerce_ai_api" = "apps/api/src/commerce_ai_api"

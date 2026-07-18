@@ -1,0 +1,114 @@
+{
+  "name": "demo_catalog_seed",
+  "version": 1,
+  "description": "Deterministic M1 demo fixture for tenant, catalog, product, and review seed planning.",
+  "tenants": [
+    {
+      "id": "tenant_northstar",
+      "name": "Northstar Retail",
+      "slug": "northstar-retail"
+    },
+    {
+      "id": "tenant_acme",
+      "name": "Acme Outlet",
+      "slug": "acme-outlet"
+    }
+  ],
+  "users": [
+    {
+      "id": "user_nora",
+      "tenant_id": "tenant_northstar",
+      "email": "nora.manager@northstar.example",
+      "name": "Nora Patel",
+      "role": "catalog_manager"
+    },
+    {
+      "id": "user_eli",
+      "tenant_id": "tenant_acme",
+      "email": "eli.ops@acme.example",
+      "name": "Eli Rivera",
+      "role": "catalog_manager"
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "supplier_brightline",
+      "tenant_id": "tenant_northstar",
+      "name": "Brightline Supply",
+      "source_key": "brightline"
+    },
+    {
+      "id": "supplier_harbor",
+      "tenant_id": "tenant_northstar",
+      "name": "Harbor Home Goods",
+      "source_key": "harbor-home"
+    }
+  ],
+  "products": [
+    {
+      "id": "product_brightline_mug_001",
+      "tenant_id": "tenant_northstar",
+      "supplier_id": "supplier_brightline",
+      "supplier_sku": "BL-MUG-14-BLK",
+      "title": "Northstar Ceramic Travel Mug 14 oz Black",
+      "brand": "Northstar",
+      "category": "Kitchen",
+      "price": "18.99",
+      "currency": "USD"
+    },
+    {
+      "id": "product_harbor_mug_491",
+      "tenant_id": "tenant_northstar",
+      "supplier_id": "supplier_harbor",
+      "supplier_sku": "HHG-TRAVELMUG-BLK-14",
+      "title": "Northstar 14oz Ceramic Travel Mug - Matte Black",
+      "brand": "Northstar",
+      "category": "Kitchen",
+      "price": "19.49",
+      "currency": "USD"
+    },
+    {
+      "id": "product_brightline_lamp_204",
+      "tenant_id": "tenant_northstar",
+      "supplier_id": "supplier_brightline",
+      "supplier_sku": "BL-LAMP-OAK-18",
+      "title": "Alder Desk Lamp with Oak Base",
+      "brand": "Alder",
+      "category": "Lighting",
+      "price": "64.00",
+      "currency": "USD"
+    },
+    {
+      "id": "product_harbor_sheet_778",
+      "tenant_id": "tenant_northstar",
+      "supplier_id": "supplier_harbor",
+      "supplier_sku": "HHG-SHEET-QN-PERCALE",
+      "title": "Percale Cotton Sheet Set Queen White",
+      "brand": "Harbor Home",
+      "category": "Bedding",
+      "price": "72.50",
+      "currency": "USD"
+    }
+  ],
+  "review_cases": [
+    {
+      "id": "review_case_mug_duplicate",
+      "tenant_id": "tenant_northstar",
+      "status": "open",
+      "incoming_product_id": "product_harbor_mug_491",
+      "candidate_product_id": "product_brightline_mug_001",
+      "confidence": 0.91,
+      "reason_codes": [
+        "normalized_title_match",
+        "brand_match",
+        "category_match"
+      ],
+      "recommended_proposal": "approve_merge",
+      "evidence": {
+        "title_similarity": 0.94,
+        "brand_match": true,
+        "price_delta": "0.50"
+      }
+    }
+  ]
+}
