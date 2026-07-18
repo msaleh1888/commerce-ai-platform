@@ -49,6 +49,10 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.CheckConstraint(
+            "role IN ('administrator', 'catalog_manager', 'merchandiser', 'ai_engineer', 'viewer')",
+            name="ck_memberships_role",
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("tenant_id", "user_id", name="uq_memberships_tenant_user"),
     )

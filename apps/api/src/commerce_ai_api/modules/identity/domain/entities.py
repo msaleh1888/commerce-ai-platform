@@ -31,4 +31,5 @@ class SessionRecord:
     @property
     def is_active(self) -> bool:
         now = datetime.now(UTC)
-        return self.revoked_at is None and self.expires_at > now
+        expires_at = self.expires_at if self.expires_at.tzinfo is not None else self.expires_at.replace(tzinfo=UTC)
+        return self.revoked_at is None and expires_at > now

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError
 from argon2.low_level import Type
 
 
@@ -16,4 +17,7 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password_hash: str, password: str) -> bool:
-    return _PASSWORD_HASHER.verify(password_hash, password)
+    try:
+        return _PASSWORD_HASHER.verify(password_hash, password)
+    except (InvalidHashError, VerificationError):
+        return False

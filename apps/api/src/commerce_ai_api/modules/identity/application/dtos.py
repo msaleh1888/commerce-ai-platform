@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from commerce_ai_api.modules.tenancy.application.dtos import TenantContextDTO
 
 @dataclass(frozen=True, slots=True)
 class UserDTO:
@@ -22,3 +23,9 @@ class SessionDTO:
     issued_at: datetime
     expires_at: datetime
     revoked_at: datetime | None
+
+
+@dataclass(frozen=True, slots=True)
+class AuthenticatedSessionDTO:
+    session: SessionDTO
+    tenant_context: TenantContextDTO

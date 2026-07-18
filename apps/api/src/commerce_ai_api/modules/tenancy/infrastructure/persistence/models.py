@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from commerce_ai_api.db.base import Base
+from commerce_ai_api.modules.tenancy.domain.roles import Role
+
+
+_ROLE_VALUES = ", ".join(f"'{role.value}'" for role in Role)
 
 
 class TenantModel(Base):
@@ -34,4 +38,7 @@ class MembershipModel(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
-    __table_args__ = (UniqueConstraint("tenant_id", "user_id", name="uq_memberships_tenant_user"),)
+    __table_args__ = (
+        CheckConstraint(f"role IN ({_ROLE_VALUES})", name="ck_memberships_role"),
+        UniqueConstraint("tenant_id", "user_id", name="uq_memberships_tenant_user"),
+    )
