@@ -17,6 +17,7 @@ const config: Config = {
           selected: "rgb(var(--color-surface-selected) / <alpha-value>)",
           subtle: "rgb(var(--color-surface-subtle) / <alpha-value>)",
           evidence: "rgb(var(--color-surface-evidence) / <alpha-value>)",
+          overlay: "rgb(var(--color-surface-overlay) / <alpha-value>)",
         },
         text: {
           primary: "rgb(var(--color-text-primary) / <alpha-value>)",

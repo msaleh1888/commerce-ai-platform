@@ -34,3 +34,23 @@ test("shared primitives stay presentational", async () => {
     assert.doesNotMatch(source, /from ["']@\/lib\/tenant/);
   }
 });
+
+test("modal primitives expose the required accessibility behavior", async () => {
+  for (const primitive of ["Dialog", "Drawer"]) {
+    const source = await readFile(new URL(`./${primitive}.tsx`, import.meta.url), "utf8");
+
+    assert.match(source, /aria-labelledby=/);
+    assert.match(source, /aria-describedby=/);
+    assert.match(source, /useModalAccessibility/);
+    assert.match(source, /bg-surface-overlay/);
+  }
+});
+
+test("tabs expose controlled ARIA relationships and keyboard navigation", async () => {
+  const source = await readFile(new URL("./Tabs.tsx", import.meta.url), "utf8");
+
+  assert.match(source, /aria-controls=/);
+  assert.match(source, /aria-labelledby=/);
+  assert.match(source, /ArrowRight/);
+  assert.match(source, /ArrowLeft/);
+});

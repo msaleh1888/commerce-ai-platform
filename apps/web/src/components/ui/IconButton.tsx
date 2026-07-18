@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 
 import { Tooltip } from "./Tooltip";
 import { cn } from "./utils";
@@ -30,15 +30,10 @@ const variantClass: Record<IconButtonVariant, string> = {
   danger: "border-transparent bg-status-failed text-text-inverse shadow-raised hover:bg-status-failed/90",
 };
 
-export function IconButton({
-  className,
-  icon,
-  size = "md",
-  tooltip,
-  type = "button",
-  variant = "secondary",
-  ...props
-}: IconButtonProps) {
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
+  { className, icon, size = "md", tooltip, type = "button", variant = "secondary", ...props },
+  ref,
+) {
   const button = (
     <button
       className={cn(
@@ -48,6 +43,7 @@ export function IconButton({
         variantClass[variant],
         className,
       )}
+      ref={ref}
       type={type}
       {...props}
     >
@@ -58,4 +54,4 @@ export function IconButton({
   );
 
   return <Tooltip content={tooltip ?? props["aria-label"]}>{button}</Tooltip>;
-}
+});
