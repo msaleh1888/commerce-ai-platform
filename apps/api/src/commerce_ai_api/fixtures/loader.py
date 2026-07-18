@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 DEMO_SEED_FIXTURE_NAME = "demo_catalog_seed"
-REQUIRED_TENANT_NAMES = {"Northstar Retail"}
+REQUIRED_TENANT_NAMES = {"Northstar Retail", "Acme Outlet"}
 
 
 def default_demo_seed_path() -> Path:
@@ -31,7 +31,7 @@ def load_demo_seed_fixture(path: Path | None = None) -> dict[str, Any]:
         missing = ", ".join(sorted(missing_tenants))
         raise ValueError(f"Missing required demo tenant names: {missing}.")
 
-    for key in ("tenants", "users", "suppliers", "products", "review_cases"):
+    for key in ("tenants", "users", "memberships", "sessions", "suppliers", "products", "review_cases"):
         if not isinstance(fixture.get(key), list):
             raise ValueError(f"Fixture key {key!r} must be a list.")
 
@@ -44,6 +44,8 @@ def summarize_seed_fixture(fixture: dict[str, Any]) -> dict[str, str | int]:
         "fixture": str(fixture["name"]),
         "tenants": len(fixture["tenants"]),
         "users": len(fixture["users"]),
+        "memberships": len(fixture["memberships"]),
+        "sessions": len(fixture["sessions"]),
         "suppliers": len(fixture["suppliers"]),
         "products": len(fixture["products"]),
         "review_cases": len(fixture["review_cases"]),

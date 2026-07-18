@@ -1,7 +1,7 @@
 {
   "name": "demo_catalog_seed",
   "version": 1,
-  "description": "Deterministic M1 demo fixture for tenant, catalog, product, and review seed planning.",
+  "description": "Deterministic demo fixture for tenant, identity, catalog, product, and review seed planning.",
   "tenants": [
     {
       "id": "tenant_northstar",
@@ -17,19 +17,52 @@
   "users": [
     {
       "id": "user_nora",
-      "tenant_id": "tenant_northstar",
       "email": "nora.manager@northstar.example",
-      "name": "Nora Patel",
-      "role": "catalog_manager"
+      "name": "Nora Patel"
     },
     {
       "id": "user_eli",
-      "tenant_id": "tenant_acme",
       "email": "eli.ops@acme.example",
-      "name": "Eli Rivera",
-      "role": "catalog_manager"
+      "name": "Eli Rivera"
+    },
+    {
+      "id": "user_avery",
+      "email": "avery.admin@northstar.example",
+      "name": "Avery Chen"
+    },
+    {
+      "id": "user_mina",
+      "email": "mina.ai@acme.example",
+      "name": "Mina Okafor"
     }
   ],
+  "memberships": [
+    {
+      "id": "membership_northstar_nora_catalog_manager",
+      "tenant_id": "tenant_northstar",
+      "user_id": "user_nora",
+      "role": "catalog_manager"
+    },
+    {
+      "id": "membership_acme_eli_merchandiser",
+      "tenant_id": "tenant_acme",
+      "user_id": "user_eli",
+      "role": "merchandiser"
+    },
+    {
+      "id": "membership_northstar_avery_administrator",
+      "tenant_id": "tenant_northstar",
+      "user_id": "user_avery",
+      "role": "administrator"
+    },
+    {
+      "id": "membership_acme_mina_ai_engineer",
+      "tenant_id": "tenant_acme",
+      "user_id": "user_mina",
+      "role": "ai_engineer"
+    }
+  ],
+  "sessions": [],
   "suppliers": [
     {
       "id": "supplier_brightline",
