@@ -524,6 +524,47 @@ Acceptance criteria:
 - Review detail screenshot is captured.
 - Screenshots can be used in PR review.
 
+### Issue M2-07: Establish identity and tenancy domain foundation
+
+Labels:
+
+```text
+type:backend, type:security, type:test, area:identity, area:tenancy, priority:p0
+```
+
+Description:
+
+Implement the `identity` and `tenancy` backend modules under the canonical architecture. Add users, tenants, memberships, roles, migrations, tenant-scoped repository contracts, deterministic Northstar/Acme fixtures, and cross-tenant test helpers.
+
+Acceptance criteria:
+
+- Identity and tenancy modules follow ADR 0008 and canonical backend boundaries.
+- PostgreSQL migrations create users, tenants, memberships, and session-ready records.
+- Seed fixtures create Northstar Retail and Acme Outlet with distinct memberships.
+- Protected repository methods require tenant scope.
+- Cross-tenant read and mutation denial tests pass.
+
+### Issue M2-08: Implement demo authentication, session, and authorization boundary
+
+Labels:
+
+```text
+type:backend, type:frontend, type:security, type:test, area:identity, area:tenancy, priority:p0
+```
+
+Description:
+
+Implement ADR 0008: application-managed demo login/logout, opaque sessions, active-tenant switching, current-session contract, FastAPI actor/tenant/role dependencies, and web session consumption.
+
+Acceptance criteria:
+
+- Login, logout, current-session, and active-tenant API contracts work.
+- Password hashes and raw session tokens are never exposed.
+- Session expiry/revocation behavior is tested.
+- Tenant switching requires membership.
+- Role checks deny administration and approval operations to unauthorized users.
+- App shell displays the safe session tenant and role context.
+
 ## M3 Tracking Issue: Catalog Import and Normalization
 
 Labels:
@@ -635,4 +676,3 @@ Acceptance criteria:
 4. Create milestones M0 to M7.
 5. Create M0, M1, and M2 issues from this backlog.
 6. Start implementation with `feature/m1-project-foundation`.
-
