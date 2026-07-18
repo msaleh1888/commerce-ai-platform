@@ -132,6 +132,18 @@ Stop services:
 docker compose down
 ```
 
+## CI
+
+GitHub Actions runs on pull requests. The CI skeleton validates the current M1 foundation with:
+
+```bash
+python -m pytest tests/unit/api tests/unit/worker
+python -m alembic -c apps/api/alembic.ini upgrade head --sql
+docker compose config --quiet
+cd apps/web && npm run typecheck
+cd apps/web && npm run build
+```
+
 ## MVP Architecture Direction
 
 The project starts as a modular monolith with separate deployable processes:
