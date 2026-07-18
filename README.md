@@ -150,6 +150,7 @@ GitHub Actions runs on pull requests. The CI skeleton validates the current M1 f
 
 ```bash
 python -m pytest tests/unit/api tests/unit/worker
+python tools/architecture/check_boundaries.py
 python -m alembic -c apps/api/alembic.ini upgrade head --sql
 docker compose config --quiet
 cd apps/web && npm run typecheck
@@ -173,6 +174,9 @@ PostgreSQL is the source of truth, Qdrant is a derived retrieval index, and Redi
 - [Project roadmap](docs/planning/project-roadmap.md)
 - [MVP scope](docs/mvp-scope.md)
 - [Architecture overview](docs/architecture/overview.md)
+- [Architecture governance](docs/architecture/architecture-governance.md)
+- [Final target architecture](docs/architecture/final-target-architecture.md)
+- [Implementation standards](docs/architecture/implementation-guide.md)
 - [v0 design capture](docs/ux/v0-design-capture.md)
 
 ## Next Foundation Issues

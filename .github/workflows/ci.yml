@@ -27,6 +27,12 @@ jobs:
       - name: Run backend and worker unit tests
         run: python -m pytest tests/unit/api tests/unit/worker
 
+      - name: Enforce architecture boundaries
+        run: python tools/architecture/check_boundaries.py
+
+      - name: Test architecture boundary checker
+        run: python -m pytest tests/architecture
+
       - name: Validate migrations
         run: python -m alembic -c apps/api/alembic.ini upgrade head --sql
 
