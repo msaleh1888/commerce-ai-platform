@@ -4,13 +4,18 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from commerce_ai_api.core.config import get_settings
+from commerce_ai_api.db.base import Base
+from commerce_ai_api.modules.identity.infrastructure.persistence import models as identity_models
+from commerce_ai_api.modules.tenancy.infrastructure.persistence import models as tenancy_models
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = None
+_ = (identity_models, tenancy_models)
+
+target_metadata = Base.metadata
 
 
 def get_database_url() -> str:
