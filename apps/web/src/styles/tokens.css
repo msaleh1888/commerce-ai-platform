@@ -1,0 +1,78 @@
+:root {
+  color-scheme: light;
+
+  /* Surface tokens */
+  --color-surface-application: 246 248 251;
+  --color-surface-sidebar: 239 245 248;
+  --color-surface-raised: 255 255 255;
+  --color-surface-selected: 226 242 247;
+  --color-surface-subtle: 241 246 249;
+  --color-surface-evidence: 234 247 249;
+  --color-surface-overlay: 15 23 42;
+
+  /* Text tokens */
+  --color-text-primary: 15 23 42;
+  --color-text-secondary: 51 65 85;
+  --color-text-muted: 100 116 139;
+  --color-text-inverse: 248 250 252;
+
+  /* Border and focus tokens */
+  --color-border-subtle: 226 232 240;
+  --color-border-strong: 203 213 225;
+  --color-focus-ring: 14 116 144;
+
+  /* Accent tokens */
+  --color-accent-deep: 12 74 110;
+  --color-accent: 14 116 144;
+  --color-accent-teal: 13 148 136;
+  --color-accent-soft: 224 242 254;
+
+  /* Operational status tokens */
+  --color-status-processing: 37 99 235;
+  --color-status-ready: 22 163 74;
+  --color-status-review: 217 119 6;
+  --color-status-failed: 220 38 38;
+  --color-status-inactive: 100 116 139;
+
+  --color-status-processing-surface: 219 234 254;
+  --color-status-ready-surface: 220 252 231;
+  --color-status-review-surface: 254 243 199;
+  --color-status-failed-surface: 254 226 226;
+  --color-status-inactive-surface: 241 245 249;
+
+  /* Spacing scale */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Typography scale */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-size-metadata: 0.75rem;
+  --font-size-table: 0.8125rem;
+  --font-size-body: 0.875rem;
+  --font-size-section: 1rem;
+  --font-size-title: 1.5rem;
+  --line-height-tight: 1.25;
+  --line-height-body: 1.5;
+
+  /* Shadow and radius scales */
+  --shadow-raised: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 1px rgb(15 23 42 / 0.04);
+  --shadow-dialog: 0 18px 48px rgb(15 23 42 / 0.18);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+
+  /* Backward-compatible aliases used by the M1 skeleton. */
+  --color-background: var(--color-surface-application);
+  --color-foreground: var(--color-text-primary);
+  --color-border: var(--color-border-subtle);
+  --color-primary: var(--color-accent);
+  --color-muted: var(--color-text-muted);
+}

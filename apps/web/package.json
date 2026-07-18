@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "node --test src/styles/tokens.test.mjs src/components/ui/ui-primitives.test.mjs",
     "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
+    "lucide-react": "^1.25.0",
     "next": "^15.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

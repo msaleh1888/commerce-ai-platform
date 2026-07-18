@@ -1,14 +1,8 @@
+@import "../styles/tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-  --color-background: 248 250 252;
-  --color-foreground: 15 23 42;
-  --color-border: 203 213 225;
-  --color-primary: 14 116 144;
-  --color-muted: 71 85 105;
-}
 
 * {
   box-sizing: border-box;
@@ -21,7 +15,19 @@ body {
 
 body {
   margin: 0;
-  background: rgb(var(--color-background));
-  color: rgb(var(--color-foreground));
-  font-family: Arial, Helvetica, sans-serif;
+  background: rgb(var(--color-surface-application));
+  color: rgb(var(--color-text-primary));
+  font-family: var(--font-sans);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--color-focus-ring));
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgb(var(--color-accent-soft));
+  color: rgb(var(--color-text-primary));
 }
