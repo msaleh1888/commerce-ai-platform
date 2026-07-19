@@ -66,7 +66,7 @@ test("review adapter is React-free and receives safe session data", async () => 
   const adapter = await readFile(new URL("../api/review.ts", import.meta.url), "utf8");
   const state = await readFile(new URL("../state/review-state.ts", import.meta.url), "utf8");
 
-  assert.match(adapter, /DemoSessionView/);
+  assert.match(adapter, /CurrentSessionView/);
   assert.doesNotMatch(adapter, /from ["']react["']|useCurrentSession|features\/auth/);
   assert.doesNotMatch(state, /adapters\/review|getSession|from ["']react["']/);
 });

@@ -2,10 +2,6 @@ import type {
   ApprovalContextView,
   AuditPreviewView,
   DemoActionResult,
-  DemoCapability,
-  DemoRole,
-  DemoSessionView,
-  DemoTenantView,
   EvaluationContextView,
   FieldComparisonView,
   MatchingSignalView,
@@ -14,31 +10,35 @@ import type {
   ReviewCaseDetail,
   ReviewCaseSummary,
 } from "@/features/demo-data/contracts";
+import type { CurrentTenantView } from "@/lib/auth";
 
 export type ReviewDecision = "merge_duplicate" | "mark_variant" | "keep_separate" | "defer";
 
 export type ComparisonStatus = "match" | "caution" | "blocking";
 
-export type ReviewAdapterErrorCode = "unknown_tenant" | "load_failed";
+export type ReviewAdapterErrorCode = "unknown_tenant" | "load_failed" | "incomplete_case_detail";
 
 export type ReviewAdapterResult =
   | { readonly status: "loaded"; readonly payload: ReviewAdapterPayload }
+  | { readonly status: "partial"; readonly payload: ReviewAdapterPayload }
   | { readonly status: "empty"; readonly payload: ReviewAdapterPayload }
   | { readonly status: "error"; readonly code: ReviewAdapterErrorCode; readonly message: string };
 
 export interface ReviewAdapterPayload {
-  readonly actor: DemoSessionView["actor"];
-  readonly tenant: DemoTenantView;
-  readonly role: DemoRole;
-  readonly allowedCapabilities: readonly DemoCapability[];
+  readonly actorName: string;
+  readonly tenant: CurrentTenantView;
+  readonly role: string;
+  readonly allowedCapabilities: readonly string[];
   readonly summaries: readonly ReviewCaseSummary[];
   readonly cases: readonly ReviewCaseDetail[];
   readonly initialSelectedCaseId: string | null;
+  readonly unavailableCaseCount: number;
 }
 
 export interface ReviewQueueRowViewModel extends ReviewCaseSummary {
   readonly proposalLabel: string;
   readonly confidenceLabel: string;
+  readonly detailAvailability: "ready" | "unavailable";
 }
 
 export interface ReviewComparisonRowViewModel extends FieldComparisonView {
@@ -68,7 +68,7 @@ export interface ReviewWorkspaceViewModel {
   readonly actorName: string;
   readonly tenantName: string;
   readonly tenantSlug: string;
-  readonly role: DemoRole;
+  readonly role: string;
   readonly unresolvedCount: number;
   readonly queue: readonly ReviewQueueRowViewModel[];
   readonly casesById: Readonly<Record<string, ReviewCaseViewModel>>;
@@ -78,6 +78,7 @@ export interface ReviewWorkspaceViewModel {
 export type ReviewFeatureState =
   | { readonly kind: "loading" }
   | { readonly kind: "ready"; readonly workspace: ReviewWorkspaceViewModel }
+  | { readonly kind: "partial_success"; readonly workspace: ReviewWorkspaceViewModel; readonly message: string }
   | { readonly kind: "empty"; readonly title: string; readonly message: string }
   | { readonly kind: "permission_denied"; readonly title: string; readonly message: string }
   | {

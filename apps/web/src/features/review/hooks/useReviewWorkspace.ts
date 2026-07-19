@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { AuthApiError, getSession } from "@/features/auth/api";
-import { getDemoDashboardSummary } from "@/features/demo-data/adapters/dashboard";
-import type { DemoSessionView } from "@/features/demo-data/contracts";
+import { useCurrentSession } from "@/lib/auth";
 
 import { loadReviewWorkspace } from "../api/review";
 import type { ReviewDecision, ReviewFeatureState, ReviewInteractionState } from "../schemas/view-model";
@@ -27,28 +25,13 @@ export interface UseReviewWorkspaceResult {
 }
 
 export function useReviewWorkspace(): UseReviewWorkspaceResult {
-  const sessionState = useCurrentSession();
+  const { session } = useCurrentSession();
   const [interaction, setInteraction] = useState<ReviewInteractionState | null>(null);
 
-  const state = useMemo<ReviewFeatureState>(() => {
-    if (sessionState.kind === "loading") {
-      return { kind: "loading" };
-    }
-
-    if (sessionState.kind === "error") {
-      return {
-        code: "load_failed",
-        kind: "error",
-        message: sessionState.message,
-        title: "Review data failed to load",
-      };
-    }
-
-    return toReviewFeatureState(loadReviewWorkspace(sessionState.session));
-  }, [sessionState]);
+  const state = useMemo<ReviewFeatureState>(() => toReviewFeatureState(loadReviewWorkspace(session)), [session]);
 
   useEffect(() => {
-    if (state.kind !== "ready") {
+    if (state.kind !== "ready" && state.kind !== "partial_success") {
       setInteraction(null);
       return;
     }
@@ -69,7 +52,7 @@ export function useReviewWorkspace(): UseReviewWorkspaceResult {
   const onOpenDecision = useCallback(
     (decision: ReviewDecision) => {
       setInteraction((current) => {
-        if (!current || state.kind !== "ready") {
+        if (!current || (state.kind !== "ready" && state.kind !== "partial_success")) {
           return current;
         }
 
@@ -95,48 +78,4 @@ export function useReviewWorkspace(): UseReviewWorkspaceResult {
     onSelectCase,
     state,
   };
-}
-
-type CurrentSessionState =
-  | { readonly kind: "loading" }
-  | { readonly kind: "ready"; readonly session: DemoSessionView }
-  | { readonly kind: "error"; readonly message: string };
-
-function useCurrentSession(): CurrentSessionState {
-  const [sessionState, setSessionState] = useState<CurrentSessionState>({ kind: "loading" });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    getSession()
-      .then((session) => {
-        if (!cancelled) {
-          setSessionState({ kind: "ready", session });
-        }
-      })
-      .catch((error: unknown) => {
-        if (cancelled) {
-          return;
-        }
-
-        if (process.env.NODE_ENV === "development" && !(error instanceof AuthApiError)) {
-          setSessionState({
-            kind: "ready",
-            session: getDemoDashboardSummary("northstar-retail").session,
-          });
-          return;
-        }
-
-        setSessionState({
-          kind: "error",
-          message: "A signed-in session is required before duplicate-review data can load.",
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return sessionState;
 }

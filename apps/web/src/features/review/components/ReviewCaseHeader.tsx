@@ -13,7 +13,7 @@ export function ReviewCaseHeader({ reviewCase }: { readonly reviewCase: ReviewCa
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="text-xs font-medium uppercase text-text-muted">Selected case</p>
-          <h1 className="mt-1 break-words text-xl font-semibold text-text-primary">{reviewCase.summary.title}</h1>
+          <h2 className="mt-1 break-words text-xl font-semibold text-text-primary">{reviewCase.summary.title}</h2>
           <p className="mt-1 break-all text-xs text-text-muted">{reviewCase.summary.caseId}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

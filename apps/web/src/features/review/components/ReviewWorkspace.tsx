@@ -46,9 +46,10 @@ export function ReviewWorkspace() {
     );
   }
 
+  const workspace = review.state.workspace;
   const selectedCase =
-    review.state.workspace.casesById[review.interaction.selectedCaseId] ??
-    review.state.workspace.casesById[review.state.workspace.initialSelectedCaseId];
+    workspace.casesById[review.interaction.selectedCaseId] ??
+    workspace.casesById[workspace.initialSelectedCaseId];
 
   return (
     <div className="min-w-0 space-y-4">
@@ -56,7 +57,7 @@ export function ReviewWorkspace() {
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold text-text-primary">Review queue</h1>
           <p className="mt-1 break-words text-sm text-text-muted">
-            {review.state.workspace.tenantName} / {review.state.workspace.role} / {review.state.workspace.unresolvedCount} unresolved cases
+            {workspace.tenantName} / {workspace.role} / {workspace.unresolvedCount} unresolved cases
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -64,10 +65,10 @@ export function ReviewWorkspace() {
           <StatusBadge tone="inactive">Local prototype decisions only</StatusBadge>
         </div>
       </header>
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(18rem,0.36fr)_minmax(0,0.64fr)]">
+      <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(18rem,0.36fr)_minmax(0,0.64fr)]">
         <ReviewQueue
           onSelectCase={review.onSelectCase}
-          rows={review.state.workspace.queue}
+          rows={workspace.queue}
           selectedCaseId={review.interaction.selectedCaseId}
         />
         <section className="min-w-0 space-y-4" aria-label="Selected review case detail">

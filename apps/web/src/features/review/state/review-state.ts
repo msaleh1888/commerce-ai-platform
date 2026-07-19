@@ -1,4 +1,4 @@
-import type { DemoActionResult, DemoCapability, ReviewCaseDetail } from "@/features/demo-data/contracts";
+import type { DemoActionResult, ReviewCaseDetail } from "@/features/demo-data/contracts";
 
 import type {
   ComparisonStatus,
@@ -12,8 +12,8 @@ import type {
   ReviewWorkspaceViewModel,
 } from "../schemas/view-model";
 
-const reviewReadCapability: DemoCapability = "catalog.review:read";
-const approvalExecuteCapability: DemoCapability = "catalog.approval:execute";
+const reviewReadCapability = "catalog.review:read";
+const approvalExecuteCapability = "catalog.approval:execute";
 
 const proposalLabels: Record<ReviewDecision, string> = {
   defer: "Defer",
@@ -97,7 +97,12 @@ export function toReviewFeatureState(result: ReviewAdapterResult): ReviewFeature
       code: result.code,
       kind: "error",
       message: result.message,
-      title: result.code === "unknown_tenant" ? "Tenant review data unavailable" : "Review data failed to load",
+      title:
+        result.code === "unknown_tenant"
+          ? "Tenant review data unavailable"
+          : result.code === "incomplete_case_detail"
+            ? "Review case detail unavailable"
+            : "Review data failed to load",
     };
   }
 
@@ -109,6 +114,15 @@ export function toReviewFeatureState(result: ReviewAdapterResult): ReviewFeature
     };
   }
 
+  if (result.payload.summaries.length > 0 && result.payload.cases.length === 0) {
+    return {
+      code: "incomplete_case_detail",
+      kind: "error",
+      message: "Review cases are missing the detail required for a safe decision.",
+      title: "Review case detail unavailable",
+    };
+  }
+
   if (result.status === "empty" || result.payload.summaries.length === 0 || !result.payload.initialSelectedCaseId) {
     return {
       kind: "empty",
@@ -117,9 +131,18 @@ export function toReviewFeatureState(result: ReviewAdapterResult): ReviewFeature
     };
   }
 
+  const workspace = mapReviewWorkspace(result.payload);
+  if (result.status === "partial") {
+    return {
+      kind: "partial_success",
+      message: `${result.payload.unavailableCaseCount} review cases need source-detail recovery before a decision can be recorded.`,
+      workspace,
+    };
+  }
+
   return {
     kind: "ready",
-    workspace: mapReviewWorkspace(result.payload),
+    workspace,
   };
 }
 
@@ -127,14 +150,16 @@ function mapReviewWorkspace(payload: Exclude<ReviewAdapterResult, { status: "err
   const cases = payload.cases.map((reviewCase) =>
     mapReviewCase(reviewCase, payload.allowedCapabilities),
   );
+  const detailedCaseIds = new Set(cases.map((reviewCase) => reviewCase.summary.caseId));
 
   return {
-    actorName: payload.actor.name,
+    actorName: payload.actorName,
     casesById: Object.fromEntries(cases.map((reviewCase) => [reviewCase.summary.caseId, reviewCase])),
     initialSelectedCaseId: payload.initialSelectedCaseId ?? payload.summaries[0].caseId,
     queue: payload.summaries.map((summary): ReviewQueueRowViewModel => ({
       ...summary,
       confidenceLabel: formatConfidence(summary.confidence),
+      detailAvailability: detailedCaseIds.has(summary.caseId) ? "ready" : "unavailable",
       proposalLabel: formatProposalLabel(summary.proposal),
     })),
     role: payload.role,
@@ -146,7 +171,7 @@ function mapReviewWorkspace(payload: Exclude<ReviewAdapterResult, { status: "err
 
 function mapReviewCase(
   reviewCase: ReviewCaseDetail,
-  allowedCapabilities: readonly DemoCapability[],
+  allowedCapabilities: readonly string[],
 ): ReviewCaseViewModel {
   const supportingSignalCount = reviewCase.signals.filter((signal) => signal.weight === "supporting").length;
 

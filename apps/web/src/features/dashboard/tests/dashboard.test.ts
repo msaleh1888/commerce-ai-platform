@@ -22,19 +22,25 @@ import {
 } from "../state/fixtures";
 
 const northstarSession: CurrentSessionView = {
+  actor: { name: "Maya Chen" },
   activeTenant: {
     id: "tenant_northstar_retail",
     name: "Northstar Retail",
     slug: "northstar-retail",
   },
+  allowedCapabilities: ["catalog.dashboard:read", "catalog.review:read", "catalog.approval:execute"],
+  role: "catalog_manager",
 };
 
 const acmeSession: CurrentSessionView = {
+  actor: { name: "Jordan Lee" },
   activeTenant: {
     id: "tenant_acme_outlet",
     name: "Acme Outlet",
     slug: "acme-outlet",
   },
+  allowedCapabilities: ["catalog.dashboard:read", "catalog.review:read"],
+  role: "merchandiser",
 };
 
 test("tenant-to-scenario mapping is explicit and unknown tenants do not default", () => {
@@ -74,7 +80,10 @@ test("dashboard adapter returns only the active tenant's deterministic summary",
 
 test("unknown active tenant becomes a typed dashboard error", async () => {
   const result = await loadDashboardSummaryForSession({
+    actor: { name: "Unknown" },
     activeTenant: { id: "tenant_unknown", name: "Unknown", slug: "unknown" },
+    allowedCapabilities: [],
+    role: "viewer",
   });
 
   assert.deepEqual(createDashboardStateFromAdapterResult(result), {

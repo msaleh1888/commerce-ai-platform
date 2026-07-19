@@ -2,7 +2,8 @@ import {
   getDemoReviewCaseDetail,
   listDemoReviewCases,
 } from "@/features/demo-data/adapters/review";
-import type { DemoScenarioId, DemoSessionView } from "@/features/demo-data/contracts";
+import type { DemoScenarioId } from "@/features/demo-data/contracts";
+import type { CurrentSessionView } from "@/lib/auth";
 
 import type { ReviewAdapterResult } from "../schemas/view-model";
 
@@ -11,7 +12,7 @@ const tenantScenarioBySlug: Readonly<Record<string, DemoScenarioId>> = {
   "northstar-retail": "northstar-retail",
 };
 
-export function loadReviewWorkspace(session: DemoSessionView): ReviewAdapterResult {
+export function loadReviewWorkspace(session: CurrentSessionView): ReviewAdapterResult {
   try {
     const scenarioId = tenantScenarioBySlug[session.activeTenant.slug];
 
@@ -23,25 +24,32 @@ export function loadReviewWorkspace(session: DemoSessionView): ReviewAdapterResu
       };
     }
 
-    const summaries = listDemoReviewCases(scenarioId);
-    const cases = summaries.flatMap((summary) => {
+    const allSummaries = listDemoReviewCases(scenarioId);
+    const detailPairs = allSummaries.map((summary) => {
       const detail = getDemoReviewCaseDetail(summary.caseId, scenarioId);
-      return detail ? [detail] : [];
+      return { detail, summary };
     });
-    const firstUnresolved = summaries.find((reviewCase) => reviewCase.status === "unresolved") ?? summaries[0];
+    const summaries = allSummaries;
+    const cases = detailPairs.flatMap(({ detail }) => (detail ? [detail] : []));
+    const unavailableCaseCount = allSummaries.length - cases.length;
+
+    const firstUnresolved = detailPairs.find(
+      ({ detail, summary }) => detail && summary.status === "unresolved",
+    )?.summary ?? detailPairs.find(({ detail }) => detail)?.summary;
     const payload = {
-      actor: session.actor,
+      actorName: session.actor.name,
       allowedCapabilities: [...session.allowedCapabilities],
       cases,
       initialSelectedCaseId: firstUnresolved?.caseId ?? null,
       role: session.role,
       summaries,
       tenant: session.activeTenant,
+      unavailableCaseCount,
     };
 
     return {
       payload,
-      status: summaries.length > 0 ? "loaded" : "empty",
+      status: summaries.length === 0 ? "empty" : unavailableCaseCount > 0 ? "partial" : "loaded",
     };
   } catch {
     return {

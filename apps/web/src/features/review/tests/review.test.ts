@@ -1,8 +1,18 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import React, { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import { loadReviewWorkspace } from "../api/review";
+import { AuditPreview } from "../components/AuditPreview";
+import { EvaluationContextPanel } from "../components/EvaluationContextPanel";
+import { FieldComparison } from "../components/FieldComparison";
+import { MatchingSignals } from "../components/MatchingSignals";
+import { ProvenancePanel } from "../components/ProvenancePanel";
+import { RecommendationPanel } from "../components/RecommendationPanel";
+import { ReviewCaseHeader } from "../components/ReviewCaseHeader";
+import { ReviewQueue } from "../components/ReviewQueue";
 import type { ReviewAdapterPayload, ReviewDecision } from "../schemas/view-model";
 import {
   cancelReviewDecision,
@@ -19,15 +29,19 @@ import { getDemoReviewCaseDetail } from "../../demo-data/adapters/review";
 const northstarSession = getDemoDashboardSummary("northstar-retail").session;
 const acmeSession = getDemoDashboardSummary("acme-outlet").session;
 
+globalThis.React = React;
+
 function loadedPayload(session: DemoSessionView): ReviewAdapterPayload {
   const result = loadReviewWorkspace(session);
-  assert.equal(result.status, "loaded");
+  if (result.status === "error" || result.status === "empty") {
+    assert.fail(`Expected a populated review workspace, received ${result.status}.`);
+  }
   return result.payload;
 }
 
 function readyState(session: DemoSessionView = northstarSession) {
   const state = toReviewFeatureState(loadReviewWorkspace(session));
-  assert.equal(state.kind, "ready");
+  assert.ok(state.kind === "ready" || state.kind === "partial_success");
   return state;
 }
 
@@ -39,6 +53,21 @@ test("Northstar returns only Northstar cases and selects the Sony case first", (
   assert.ok(payload.cases.length > 0);
   assert.ok(payload.cases.every((reviewCase) => reviewCase.summary.tenantId === "tenant_northstar_retail"));
   assert.doesNotMatch(JSON.stringify(payload), /tenant_acme_outlet|rev_acme_|Acme Outlet/);
+});
+
+test("Northstar keeps incomplete cases visible but marks them unavailable for selection", () => {
+  const result = loadReviewWorkspace(northstarSession);
+
+  assert.equal(result.status, "partial");
+  assert.equal(result.payload.summaries.length, 3);
+  assert.equal(result.payload.cases.length, 1);
+  assert.equal(result.payload.unavailableCaseCount, 2);
+
+  const state = toReviewFeatureState(result);
+  assert.equal(state.kind, "partial_success");
+  assert.equal(state.workspace.queue.length, 3);
+  assert.equal(state.workspace.queue.filter((row) => row.detailAvailability === "unavailable").length, 2);
+  assert.equal(state.workspace.queue.filter((row) => row.detailAvailability === "ready").length, 1);
 });
 
 test("Acme returns only Acme cases and selects the Samsung case first", () => {
@@ -68,19 +97,35 @@ test("an unmapped tenant fails closed without Northstar fallback data", () => {
 test("a tenant with no cases maps to empty", () => {
   const state = toReviewFeatureState({
     payload: {
-      actor: northstarSession.actor,
+      actorName: northstarSession.actor.name,
       allowedCapabilities: northstarSession.allowedCapabilities,
       cases: [],
       initialSelectedCaseId: null,
       role: northstarSession.role,
       summaries: [],
       tenant: northstarSession.activeTenant,
+      unavailableCaseCount: 0,
     },
     status: "empty",
   });
 
   assert.equal(state.kind, "empty");
   assert.match(state.message, /no duplicate-review cases/i);
+});
+
+test("a review payload with no decision-ready detail maps to a safe error", () => {
+  const payload = loadedPayload(northstarSession);
+  const state = toReviewFeatureState({
+    payload: {
+      ...payload,
+      cases: [],
+    },
+    status: "loaded",
+  });
+
+  assert.equal(state.kind, "error");
+  assert.equal(state.code, "incomplete_case_detail");
+  assert.match(state.message, /detail/i);
 });
 
 test("missing catalog.review:read maps to permission denied", () => {
@@ -172,6 +217,7 @@ test("confirming each prototype decision records local demo state only", () => {
   const state = readyState();
   const originalDetail = getDemoReviewCaseDetail("rev_ns_dup_sony_wh1000xm5_001", "northstar-retail");
   const serializedBefore = JSON.stringify(originalDetail);
+  const unresolvedCountBefore = state.workspace.unresolvedCount;
 
   for (const decision of ["merge_duplicate", "mark_variant", "keep_separate", "defer"] satisfies ReviewDecision[]) {
     const opened = openReviewDecision(
@@ -185,8 +231,8 @@ test("confirming each prototype decision records local demo state only", () => {
     assert.equal(confirmed.recordedDecision?.mode, "demo");
     assert.equal(confirmed.recordedDecision?.status, "recorded_locally");
     assert.match(confirmed.recordedDecision?.message ?? "", /no server-side catalog mutation occurred/);
-    assert.equal(state.workspace.unresolvedCount, 2);
-  assert.equal(state.workspace.casesById[state.workspace.initialSelectedCaseId].summary.status, "unresolved");
+    assert.equal(state.workspace.unresolvedCount, unresolvedCountBefore);
+    assert.equal(state.workspace.casesById[state.workspace.initialSelectedCaseId].summary.status, "unresolved");
   }
 
   assert.equal(JSON.stringify(getDemoReviewCaseDetail("rev_ns_dup_sony_wh1000xm5_001", "northstar-retail")), serializedBefore);
@@ -201,49 +247,83 @@ test("Acme merchandiser cannot open an executable merge decision", () => {
   assert.equal(opened.pendingDecision, null);
 });
 
-test("the hook is the only review module with auth/session access", async () => {
+test("Acme renders approval context with a disabled merge control", async () => {
+  const { ApprovalPanel } = await import("../components/ApprovalPanel");
+  const state = readyState(acmeSession);
+  const reviewCase = state.workspace.casesById[state.workspace.initialSelectedCaseId];
+  const markup = renderToStaticMarkup(
+    createElement(ApprovalPanel, {
+      onOpenDecision: () => undefined,
+      reviewCase,
+    }),
+  );
+
+  assert.match(markup, /Approval not executable/);
+  assert.match(markup, /<button[^>]*disabled=""[^>]*>.*Approve merge/);
+  assert.match(markup, /catalog\.approval:execute/);
+});
+
+test("the review queue keeps unavailable evidence visible without making it selectable", () => {
+  const state = readyState();
+  const markup = renderToStaticMarkup(
+    createElement(ReviewQueue, {
+      onSelectCase: () => undefined,
+      rows: state.workspace.queue,
+      selectedCaseId: state.workspace.initialSelectedCaseId,
+    }),
+  );
+
+  assert.match(markup, /<ul/);
+  assert.doesNotMatch(markup, /role="listbox"|role="option"/);
+  assert.match(markup, /aria-current="true"/);
+  assert.match(markup, /Evidence unavailable/);
+  assert.match(markup, /<button[^>]*disabled=""[^>]*>[\s\S]*Evidence unavailable/);
+});
+
+test("the selected review case is a second-level heading", () => {
+  const state = readyState();
+  const reviewCase = state.workspace.casesById[state.workspace.initialSelectedCaseId];
+  const markup = renderToStaticMarkup(createElement(ReviewCaseHeader, { reviewCase }));
+
+  assert.match(markup, /<h2/);
+  assert.doesNotMatch(markup, /<h1/);
+});
+
+test("the review hook consumes the shared current-session boundary", async () => {
   const hookSource = await readFile(new URL("../hooks/useReviewWorkspace.ts", import.meta.url), "utf8");
   const adapterSource = await readFile(new URL("../api/review.ts", import.meta.url), "utf8");
   const workspaceSource = await readFile(new URL("../components/ReviewWorkspace.tsx", import.meta.url), "utf8");
 
-  assert.match(hookSource, /function useCurrentSession/);
+  assert.match(hookSource, /import\s+\{\s*useCurrentSession\s*\}\s+from\s+["']@\/lib\/auth["']/);
+  assert.doesNotMatch(hookSource, /features\/auth|features\/demo-data|getSession|function useCurrentSession/);
   assert.doesNotMatch(adapterSource, /React|useCurrentSession|features\/auth/);
   assert.doesNotMatch(workspaceSource, /useCurrentSession|features\/auth|features\/demo-data/);
 });
 
-test("ready UI components expose queue, evidence, approval, provenance, audit, and evaluation copy", async () => {
-  const workspace = await readFile(new URL("../components/ReviewWorkspace.tsx", import.meta.url), "utf8");
-  const recommendation = await readFile(new URL("../components/RecommendationPanel.tsx", import.meta.url), "utf8");
-  const comparison = await readFile(new URL("../components/FieldComparison.tsx", import.meta.url), "utf8");
-  const approval = await readFile(new URL("../components/ApprovalPanel.tsx", import.meta.url), "utf8");
-  const dialog = await readFile(new URL("../components/ReviewDecisionDialog.tsx", import.meta.url), "utf8");
-  const provenance = await readFile(new URL("../components/ProvenancePanel.tsx", import.meta.url), "utf8");
-  const audit = await readFile(new URL("../components/AuditPreview.tsx", import.meta.url), "utf8");
-  const evaluation = await readFile(new URL("../components/EvaluationContextPanel.tsx", import.meta.url), "utf8");
+test("the selected case renders evidence, provenance, and demo evaluation context", () => {
+  const state = readyState();
+  const reviewCase = state.workspace.casesById[state.workspace.initialSelectedCaseId];
+  const markup = renderToStaticMarkup(
+    createElement(
+      React.Fragment,
+      null,
+      createElement(RecommendationPanel, { reviewCase }),
+      createElement(MatchingSignals, { reviewCase }),
+      createElement(FieldComparison, { reviewCase }),
+      createElement(ProvenancePanel, { reviewCase }),
+      createElement(AuditPreview, { reviewCase }),
+      createElement(EvaluationContextPanel, { reviewCase }),
+    ),
+  );
 
-  assert.match(workspace, /<ReviewQueue/);
-  assert.match(workspace, /<RecommendationPanel/);
-  assert.match(workspace, /<ApprovalPanel/);
-  assert.match(recommendation, /Recommended proposal/);
-  assert.match(comparison, /Raw incoming/);
-  assert.match(comparison, /Normalized incoming/);
-  assert.match(comparison, /Existing canonical/);
-  assert.match(approval, /Approve merge/);
-  assert.match(approval, /Mark as variant/);
-  assert.match(approval, /Keep separate/);
-  assert.match(approval, /Defer/);
-  assert.match(dialog, /records local UI state only and does not change catalog data/);
-  assert.match(dialog, /no FastAPI call, browser storage write, audit event, or catalog mutation occurs/);
-  assert.match(provenance, /Source row/);
-  assert.match(audit, /Audit preview/);
-  assert.match(evaluation, /Demo context/);
-  assert.match(evaluation, /not a verified production measurement/);
-});
-
-test("review UI avoids non-MVP multimodal evidence language", async () => {
-  for (const component of ["MatchingSignals.tsx", "RecommendationPanel.tsx", "FieldComparison.tsx"]) {
-    const source = await readFile(new URL(`../components/${component}`, import.meta.url), "utf8");
-
-    assert.doesNotMatch(source, /image|OCR|visual similarity|multimodal/i);
-  }
+  assert.match(markup, /Recommended proposal/);
+  assert.match(markup, /GTIN exact match/);
+  assert.match(markup, /Raw incoming/);
+  assert.match(markup, /Normalized incoming/);
+  assert.match(markup, /Existing canonical/);
+  assert.match(markup, /Source row/);
+  assert.match(markup, /Audit preview/);
+  assert.match(markup, /Demo context/);
+  assert.match(markup, /not a verified production measurement/);
+  assert.doesNotMatch(markup, /image|OCR|visual similarity|multimodal/i);
 });
