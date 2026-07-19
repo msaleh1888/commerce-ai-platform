@@ -5,6 +5,7 @@ import test from "node:test";
 const appShell = await readFile(new URL("./AppShell.tsx", import.meta.url), "utf8");
 const navigation = await readFile(new URL("./navigation.ts", import.meta.url), "utf8");
 const adapter = await readFile(new URL("./demo-session-adapter.ts", import.meta.url), "utf8");
+const rootLayout = await readFile(new URL("../../app/layout.tsx", import.meta.url), "utf8");
 const authenticatedShell = await readFile(
   new URL("../../features/auth/components/AuthenticatedShellBoundary.tsx", import.meta.url),
   "utf8",
@@ -58,4 +59,9 @@ test("shell demo adapter is the only layout boundary importing demo data", () =>
 test("prototype search and user-menu placeholders are not no-op controls", () => {
   assert.doesNotMatch(appShell, /<button\s+className="flex min-w-0 flex-1/);
   assert.doesNotMatch(appShell, /aria-label="Open user menu placeholder"/);
+});
+
+test("root layout tolerates extension-added body attributes without suppressing app content", () => {
+  assert.match(rootLayout, /<body suppressHydrationWarning>/);
+  assert.doesNotMatch(rootLayout, /<html[^>]*suppressHydrationWarning/);
 });
