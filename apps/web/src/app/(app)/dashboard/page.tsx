@@ -1,10 +1,5 @@
-import { PrototypeEmptyState } from "@/components/layout";
+import { DashboardWorkspace } from "@/features/dashboard";
 
 export default function DashboardPage() {
-  return (
-    <PrototypeEmptyState
-      description="Dashboard owned by M2-04; shell route only."
-      title="Dashboard"
-    />
-  );
+  return <DashboardWorkspace />;
 }

@@ -39,6 +39,8 @@ test("mobile navigation exposes an accessible drawer control", () => {
   assert.match(appShell, /<Drawer/);
   assert.match(appShell, /aria-label="Primary"/);
   assert.match(appShell, /onNavigate/);
+  assert.match(appShell, /min-h-14/);
+  assert.match(appShell, /session\.activeTenant\.name/);
 });
 
 test("shell loads the safe auth session before using a labeled development demo fallback", () => {
@@ -55,7 +57,7 @@ test("shell demo adapter is the only layout boundary importing demo data", () =>
   assert.doesNotMatch(appShell, /@\/features\/demo-data/);
 });
 
-test("prototype search and user-menu placeholders are not no-op controls", () => {
-  assert.doesNotMatch(appShell, /<button\s+className="flex min-w-0 flex-1/);
-  assert.doesNotMatch(appShell, /aria-label="Open user menu placeholder"/);
+test("shell does not present unfinished controls as product functionality", () => {
+  assert.doesNotMatch(appShell, /search placeholder|user menu placeholder|Prototype empty|Queued for M3/i);
+  assert.doesNotMatch(navigation, /prototypeState/);
 });

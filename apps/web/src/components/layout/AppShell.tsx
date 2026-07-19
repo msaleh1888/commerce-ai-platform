@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Search, UserCircle } from "lucide-react";
+import { Menu, UserCircle } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { Drawer } from "@/components/ui/Drawer";
@@ -90,7 +90,7 @@ function ShellTopBar({
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface-raised/95 backdrop-blur">
-      <div className="flex min-h-16 min-w-0 items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="flex min-h-14 min-w-0 items-center gap-3 px-4 sm:min-h-16 sm:px-6 lg:px-8">
         <IconButton
           aria-label="Open navigation"
           className="lg:hidden"
@@ -98,15 +98,11 @@ function ShellTopBar({
           onClick={onOpenMobileNav}
           variant="ghost"
         />
-        <div className="hidden min-w-0 flex-1 items-center gap-3 rounded-md border border-border bg-surface-subtle px-3 py-2 text-text-muted md:flex">
-          <Search aria-hidden="true" size={16} />
-          <span className="truncate text-sm">Global search placeholder - product, import, review case, or audit ID</span>
+        <div className="min-w-0 sm:hidden">
+          <p className="truncate text-sm font-semibold text-text-primary">{session.activeTenant.name}</p>
+          <p className="truncate text-xs text-text-muted">{roleLabel[session.role]}</p>
         </div>
-        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-surface-subtle px-3 py-2 text-left text-sm text-text-muted md:hidden">
-          <Search aria-hidden="true" size={16} />
-          <span className="truncate">Search placeholder</span>
-        </div>
-        <div className="hidden items-center gap-2 xl:flex">
+        <div className="ml-auto hidden items-center gap-2 xl:flex">
           <StatusBadge tone={indicatorTone[processingIndicator.status]}>{processingIndicator.label}</StatusBadge>
           {sessionMode === "demo" && <StatusBadge tone="inactive">Demo session preview</StatusBadge>}
           <span className="max-w-48 truncate text-xs text-text-muted">{processingIndicator.detail}</span>
@@ -115,15 +111,11 @@ function ShellTopBar({
           <p className="truncate text-sm font-semibold text-text-primary">{session.activeTenant.name}</p>
           <p className="truncate text-xs text-text-muted">{roleLabel[session.role]}</p>
         </div>
-        <span className="hidden size-9 shrink-0 items-center justify-center text-text-secondary sm:inline-flex" title={`${session.actor.name} user menu placeholder`}>
+        <span className="hidden size-9 shrink-0 items-center justify-center text-text-secondary sm:inline-flex" title={session.actor.name}>
           <UserCircle aria-hidden="true" size={18} />
         </span>
       </div>
-      <div className="flex min-w-0 flex-col items-start gap-2 border-t border-border px-4 py-2 sm:flex-row sm:items-center xl:hidden">
-        <div className="min-w-0 sm:hidden">
-          <p className="truncate text-sm font-semibold text-text-primary">{session.activeTenant.name}</p>
-          <p className="truncate text-xs text-text-muted">{roleLabel[session.role]}</p>
-        </div>
+      <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-border px-4 py-2 xl:hidden">
         <StatusBadge className="shrink-0" tone={indicatorTone[processingIndicator.status]}>
           {processingIndicator.label}
         </StatusBadge>
@@ -158,7 +150,7 @@ function ShellSidebar({
           <NavigationLink activePath={activePath} item={item} key={item.href} onNavigate={onNavigate} />
         ))}
       </nav>
-      {!compact && (
+      {!compact && shellSecondaryItems.length > 0 && (
         <div className="border-t border-border px-3 py-3">
           {shellSecondaryItems.map((item) => (
             <NavigationLink activePath={activePath} item={item} key={item.href} onNavigate={onNavigate} />
@@ -200,7 +192,6 @@ function NavigationLink({
     >
       <Icon aria-hidden="true" size={17} />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
-      {item.prototypeState && <span className="hidden text-xs font-normal text-text-muted sm:inline">{item.prototypeState}</span>}
     </Link>
   );
 }

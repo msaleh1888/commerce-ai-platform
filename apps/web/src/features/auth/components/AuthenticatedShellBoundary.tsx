@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { AppShell, type ShellDemoContext } from "@/components/layout";
 import { AuthApiError, getSession } from "@/features/auth/api";
 import type { DemoSessionView } from "@/features/demo-data/contracts";
+import { CurrentSessionProvider } from "@/lib/auth";
 
 type ShellSessionState =
   | { readonly kind: "loading" }
@@ -56,13 +57,15 @@ export function AuthenticatedShellBoundary({ children, demoContext }: Authentica
   }
 
   return (
-    <AppShell
-      processingIndicator={demoContext.processingIndicator}
-      session={sessionState.session}
-      sessionMode={sessionState.kind}
-    >
-      {children}
-    </AppShell>
+    <CurrentSessionProvider session={sessionState.session} sessionMode={sessionState.kind}>
+      <AppShell
+        processingIndicator={demoContext.processingIndicator}
+        session={sessionState.session}
+        sessionMode={sessionState.kind}
+      >
+        {children}
+      </AppShell>
+    </CurrentSessionProvider>
   );
 }
 
