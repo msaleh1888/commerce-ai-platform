@@ -15,11 +15,10 @@ class Role(StrEnum):
 
 READ_CAPABILITIES = frozenset(
     {
-        "dashboard:view",
-        "catalog:view",
-        "search:view",
-        "evaluation:view",
-        "audit:view",
+        "catalog.product:read",
+        "catalog.review:read",
+        "evaluation.run:read",
+        "audit.event:read",
     }
 )
 
@@ -27,26 +26,22 @@ ROLE_CAPABILITIES: dict[Role, frozenset[str]] = {
     Role.ADMINISTRATOR: frozenset(
         {
             *READ_CAPABILITIES,
-            "tenant_members:manage",
-            "tenant_settings:manage",
-            "catalog:import",
-            "catalog:manage",
-            "catalog_changes:review",
-            "catalog_changes:approve",
-            "evaluation:run",
+            "tenant.member:manage",
+            "catalog.import:create",
+            "catalog.review:decide",
+            "catalog.approval:execute",
         }
     ),
     Role.CATALOG_MANAGER: frozenset(
         {
             *READ_CAPABILITIES,
-            "catalog:import",
-            "catalog:manage",
-            "catalog_changes:review",
-            "catalog_changes:approve",
+            "catalog.import:create",
+            "catalog.review:decide",
+            "catalog.approval:execute",
         }
     ),
-    Role.MERCHANDISER: frozenset({"dashboard:view", "catalog:view", "search:view", "evaluation:view"}),
-    Role.AI_ENGINEER: frozenset({"catalog:view", "search:view", "evaluation:view", "evaluation:run"}),
+    Role.MERCHANDISER: frozenset({"catalog.product:read", "catalog.review:read", "evaluation.run:read", "audit.event:read"}),
+    Role.AI_ENGINEER: frozenset({"catalog.product:read", "catalog.review:read", "evaluation.run:read"}),
     Role.VIEWER: READ_CAPABILITIES,
 }
 

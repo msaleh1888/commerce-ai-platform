@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -96,3 +98,21 @@ class SessionRepository:
                 ip_address=session_record.ip_address,
             )
         )
+
+    def revoke_by_token_hash(self, session_token_hash: str, revoked_at: datetime) -> bool:
+        model = self._session.scalar(
+            select(SessionModel).where(
+                SessionModel.session_token_hash == session_token_hash,
+                SessionModel.revoked_at.is_(None),
+            )
+        )
+        if model is None:
+            return False
+
+        model.revoked_at = revoked_at
+        return True
+
+    def update_active_tenant(self, *, session_id: str, active_tenant_id: str) -> None:
+        model = self._session.get(SessionModel, session_id)
+        if model is not None:
+            model.active_tenant_id = active_tenant_id

@@ -59,9 +59,34 @@ class MembershipRepository:
         )
         return _to_membership(model) if model else None
 
-    def list_active_for_user(self, *, user_id: str, tenant_id: str) -> list[Membership]:
-        membership = self.get_active_for_user(tenant_id=tenant_id, user_id=user_id)
-        return [membership] if membership else []
+    def list_active_for_user(self, *, user_id: str, tenant_id: str | None = None) -> list[Membership]:
+        if tenant_id is not None:
+            membership = self.get_active_for_user(tenant_id=tenant_id, user_id=user_id)
+            return [membership] if membership else []
+
+        models = self._session.scalars(
+            select(MembershipModel)
+            .where(
+                MembershipModel.user_id == user_id,
+                MembershipModel.is_active.is_(True),
+            )
+            .order_by(MembershipModel.created_at, MembershipModel.id)
+        ).all()
+        return [_to_membership(model) for model in models]
+
+    def list_active_for_user_id(self, *, user_id: str) -> list[Membership]:
+        models = self._session.scalars(
+            select(MembershipModel)
+            .where(
+                MembershipModel.user_id == user_id,
+                MembershipModel.is_active.is_(True),
+            )
+            .order_by(MembershipModel.tenant_id)
+        ).all()
+        return [_to_membership(model) for model in models]
+
+    def list_active_for_user(self, *, user_id: str) -> list[Membership]:
+        return self.list_active_for_user_id(user_id=user_id)
 
     def require_active_for_user(self, *, tenant_id: str, user_id: str) -> Membership:
         membership = self.get_active_for_user(tenant_id=tenant_id, user_id=user_id)
