@@ -1,16 +1,12 @@
 import type { ReactNode } from "react";
 
-import { AppShell, getShellDemoContext } from "@/components/layout";
+import { getShellDemoContext } from "@/components/layout";
+import { AuthenticatedShellBoundary } from "@/features/auth/components/AuthenticatedShellBoundary";
 
 export default function AuthenticatedAppLayout({ children }: { children: ReactNode }) {
   const shellContext = getShellDemoContext();
 
   return (
-    <AppShell
-      processingIndicator={shellContext.processingIndicator}
-      session={shellContext.session}
-    >
-      {children}
-    </AppShell>
+    <AuthenticatedShellBoundary demoContext={shellContext}>{children}</AuthenticatedShellBoundary>
   );
 }

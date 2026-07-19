@@ -16,6 +16,7 @@ type AppShellProps = {
   children: ReactNode;
   processingIndicator: ShellProcessingIndicator;
   session: ShellSessionView;
+  sessionMode: "authenticated" | "demo";
 };
 
 const roleLabel: Record<ShellRole, string> = {
@@ -35,7 +36,7 @@ const indicatorTone: Record<ShellProcessingIndicator["status"], "processing" | "
   partial_success: "review",
 };
 
-export function AppShell({ children, processingIndicator, session }: AppShellProps) {
+export function AppShell({ children, processingIndicator, session, sessionMode }: AppShellProps) {
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -56,6 +57,7 @@ export function AppShell({ children, processingIndicator, session }: AppShellPro
             onOpenMobileNav={() => setMobileNavOpen(true)}
             processingIndicator={processingIndicator}
             session={session}
+            sessionMode={sessionMode}
           />
           <main className="min-w-0 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8" id="main-workspace" tabIndex={-1}>
             {children}
@@ -79,10 +81,12 @@ function ShellTopBar({
   onOpenMobileNav,
   processingIndicator,
   session,
+  sessionMode,
 }: {
   onOpenMobileNav: () => void;
   processingIndicator: ShellProcessingIndicator;
   session: ShellSessionView;
+  sessionMode: "authenticated" | "demo";
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface-raised/95 backdrop-blur">
@@ -98,28 +102,22 @@ function ShellTopBar({
           <Search aria-hidden="true" size={16} />
           <span className="truncate text-sm">Global search placeholder - product, import, review case, or audit ID</span>
         </div>
-        <button
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-surface-subtle px-3 py-2 text-left text-sm text-text-muted md:hidden"
-          type="button"
-        >
+        <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border bg-surface-subtle px-3 py-2 text-left text-sm text-text-muted md:hidden">
           <Search aria-hidden="true" size={16} />
           <span className="truncate">Search placeholder</span>
-        </button>
+        </div>
         <div className="hidden items-center gap-2 xl:flex">
           <StatusBadge tone={indicatorTone[processingIndicator.status]}>{processingIndicator.label}</StatusBadge>
+          {sessionMode === "demo" && <StatusBadge tone="inactive">Demo session preview</StatusBadge>}
           <span className="max-w-48 truncate text-xs text-text-muted">{processingIndicator.detail}</span>
         </div>
         <div className="hidden min-w-0 max-w-56 border-l border-border pl-3 sm:block">
           <p className="truncate text-sm font-semibold text-text-primary">{session.activeTenant.name}</p>
           <p className="truncate text-xs text-text-muted">{roleLabel[session.role]}</p>
         </div>
-        <IconButton
-          aria-label="Open user menu placeholder"
-          className="hidden sm:inline-flex"
-          icon={<UserCircle size={18} />}
-          tooltip={`${session.actor.name} user menu placeholder`}
-          variant="ghost"
-        />
+        <span className="hidden size-9 shrink-0 items-center justify-center text-text-secondary sm:inline-flex" title={`${session.actor.name} user menu placeholder`}>
+          <UserCircle aria-hidden="true" size={18} />
+        </span>
       </div>
       <div className="flex min-w-0 flex-col items-start gap-2 border-t border-border px-4 py-2 sm:flex-row sm:items-center xl:hidden">
         <div className="min-w-0 sm:hidden">
@@ -129,6 +127,7 @@ function ShellTopBar({
         <StatusBadge className="shrink-0" tone={indicatorTone[processingIndicator.status]}>
           {processingIndicator.label}
         </StatusBadge>
+        {sessionMode === "demo" && <StatusBadge className="shrink-0" tone="inactive">Demo session preview</StatusBadge>}
         <span className="hidden min-w-0 max-w-full truncate text-xs text-text-muted sm:block">
           {processingIndicator.detail}
         </span>
