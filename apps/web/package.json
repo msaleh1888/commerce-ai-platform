@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test src/styles/tokens.test.mjs src/components/ui/ui-primitives.test.mjs src/components/layout/app-shell.test.mjs",
+    "test": "node --test src/styles/tokens.test.mjs src/components/ui/ui-primitives.test.mjs src/components/layout/app-shell.test.mjs src/features/dashboard/tests/dashboard.test.mjs",
     "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
