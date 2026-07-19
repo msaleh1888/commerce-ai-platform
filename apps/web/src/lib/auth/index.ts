@@ -4,4 +4,4 @@ export {
   type CurrentSessionContextValue,
   type CurrentSessionMode,
 } from "./current-session";
-export type { CurrentSessionView, CurrentTenantView } from "./session-contract";
+export type { CurrentActorView, CurrentSessionView, CurrentTenantView } from "./session-contract";
