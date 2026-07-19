@@ -15,9 +15,8 @@ from commerce_ai_api.api.dependencies.auth import (
 from commerce_ai_api.api.schemas.auth import ActiveTenantRequest, LoginRequest, SessionResponse
 from commerce_ai_api.core.config import Settings, get_settings
 from commerce_ai_api.modules.identity.application.dtos import AuthenticatedSessionDTO, LoginCommand, SafeSessionViewDTO
-from commerce_ai_api.modules.identity.application.errors import InvalidCredentialsError
+from commerce_ai_api.modules.identity.application.errors import AuthorizationDeniedError, InvalidCredentialsError
 from commerce_ai_api.modules.identity.application.use_cases import BuildSafeSessionView, Login, Logout, SwitchActiveTenant
-from commerce_ai_api.modules.tenancy.domain.errors import TenantAccessDeniedError
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -131,6 +130,6 @@ def switch_active_tenant(
 ) -> SessionResponse:
     try:
         session_view = use_case.execute(authenticated_session, request_body.tenant_id)
-    except TenantAccessDeniedError as exc:
+    except AuthorizationDeniedError as exc:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.") from exc
     return _session_response(session_view)

@@ -253,13 +253,16 @@ class SwitchActiveTenant:
     def execute(self, authenticated_session: AuthenticatedSessionDTO, tenant_id: str) -> SafeSessionViewDTO:
         user = self._users.get_by_id(authenticated_session.session.user_id)
         if user is None or not user.is_active:
-            raise TenantAccessDeniedError("User does not have active membership in tenant.")
+            raise AuthorizationDeniedError("User does not have active membership in tenant.")
 
-        tenant_context = self._tenant_contexts.execute(user_id=user.id, tenant_id=tenant_id)
+        try:
+            tenant_context = self._tenant_contexts.execute(user_id=user.id, tenant_id=tenant_id)
+        except TenantAccessDeniedError as exc:
+            raise AuthorizationDeniedError("User does not have active membership in tenant.") from exc
         memberships = self._membership_lister.execute(user.id)
         active_tenant = _active_tenant_from_memberships(tenant_id, memberships)
         if active_tenant is None:
-            raise TenantAccessDeniedError("User does not have active membership in tenant.")
+            raise AuthorizationDeniedError("User does not have active membership in tenant.")
 
         with self._unit_of_work:
             self._sessions.update_active_tenant(

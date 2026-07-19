@@ -39,9 +39,10 @@ def python_files(path: Path) -> list[Path]:
 
 def main() -> int:
     violations: list[str] = []
+    api_adapter_files = python_files(API_SOURCE / "api" / "routes") + python_files(API_SOURCE / "api" / "dependencies")
     violations.extend(
         check_files(
-            python_files(API_SOURCE / "api" / "routes"),
+            api_adapter_files,
             ("commerce_ai_api.db", ".infrastructure.persistence", "sqlalchemy", "commerce_ai_worker"),
         )
     )

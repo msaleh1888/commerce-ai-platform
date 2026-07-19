@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 
 from fastapi import Cookie, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
-from commerce_ai_api.db.session import SqlAlchemyUnitOfWork, create_session_factory
+from commerce_ai_api.core.auth_wiring import (
+    build_login,
+    build_logout,
+    build_resolve_authenticated_session,
+    build_safe_session_view,
+    build_switch_active_tenant,
+    get_db_session,
+)
 from commerce_ai_api.modules.identity.application.dtos import AuthenticatedSessionDTO
 from commerce_ai_api.modules.identity.application.errors import AuthorizationDeniedError
 from commerce_ai_api.modules.identity.application.use_cases import (
@@ -18,17 +24,6 @@ from commerce_ai_api.modules.identity.application.use_cases import (
     SwitchActiveTenant,
 )
 from commerce_ai_api.modules.identity.domain.session_tokens import hash_session_token
-from commerce_ai_api.modules.identity.infrastructure.persistence.repositories import SessionRepository, UserRepository
-from commerce_ai_api.modules.tenancy.application.use_cases import ListActiveTenantMemberships, ResolveTenantContext
-from commerce_ai_api.modules.tenancy.infrastructure.persistence.repositories import MembershipRepository, TenantRepository
-
-
-def get_db_session() -> Iterator[Session]:
-    session_factory = create_session_factory()
-    with session_factory() as session:
-        yield session
-
-
 def session_token_hash_from_cookie(commerce_ai_session: str | None = Cookie(default=None)) -> str:
     if not commerce_ai_session:
         raise HTTPException(
@@ -38,16 +33,17 @@ def session_token_hash_from_cookie(commerce_ai_session: str | None = Cookie(defa
     return hash_session_token(commerce_ai_session)
 
 
+def resolve_authenticated_session_use_case(
+    db_session=Depends(get_db_session),
+) -> ResolveAuthenticatedSession:
+    return build_resolve_authenticated_session(db_session)
+
+
 def require_authenticated_session(
     session_token_hash: str = Depends(session_token_hash_from_cookie),
-    db_session: Session = Depends(get_db_session),
+    use_case: ResolveAuthenticatedSession = Depends(resolve_authenticated_session_use_case),
 ) -> AuthenticatedSessionDTO:
-    memberships = MembershipRepository(db_session)
-    authenticated_session = ResolveAuthenticatedSession(
-        SessionRepository(db_session),
-        UserRepository(db_session),
-        ResolveTenantContext(memberships),
-    ).execute(session_token_hash)
+    authenticated_session = use_case.execute(session_token_hash)
     if authenticated_session is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -71,39 +67,17 @@ def require_capability(capability: str) -> Callable[[AuthenticatedSessionDTO], A
     return dependency
 
 
-def unit_of_work(db_session: Session) -> SqlAlchemyUnitOfWork:
-    return SqlAlchemyUnitOfWork(db_session)
+def login_use_case(db_session=Depends(get_db_session)) -> Login:
+    return build_login(db_session)
 
 
-def _membership_lister(db_session: Session) -> ListActiveTenantMemberships:
-    return ListActiveTenantMemberships(MembershipRepository(db_session), TenantRepository(db_session))
+def logout_use_case(db_session=Depends(get_db_session)) -> Logout:
+    return build_logout(db_session)
 
 
-def login_use_case(db_session: Session = Depends(get_db_session)) -> Login:
-    memberships = MembershipRepository(db_session)
-    return Login(
-        SessionRepository(db_session),
-        UserRepository(db_session),
-        ResolveTenantContext(memberships),
-        ListActiveTenantMemberships(memberships, TenantRepository(db_session)),
-        unit_of_work(db_session),
-    )
+def build_safe_session_view_use_case(db_session=Depends(get_db_session)) -> BuildSafeSessionView:
+    return build_safe_session_view(db_session)
 
 
-def logout_use_case(db_session: Session = Depends(get_db_session)) -> Logout:
-    return Logout(SessionRepository(db_session), unit_of_work(db_session))
-
-
-def build_safe_session_view_use_case(db_session: Session = Depends(get_db_session)) -> BuildSafeSessionView:
-    return BuildSafeSessionView(UserRepository(db_session), _membership_lister(db_session))
-
-
-def switch_active_tenant_use_case(db_session: Session = Depends(get_db_session)) -> SwitchActiveTenant:
-    memberships = MembershipRepository(db_session)
-    return SwitchActiveTenant(
-        SessionRepository(db_session),
-        UserRepository(db_session),
-        ResolveTenantContext(memberships),
-        ListActiveTenantMemberships(memberships, TenantRepository(db_session)),
-        unit_of_work(db_session),
-    )
+def switch_active_tenant_use_case(db_session=Depends(get_db_session)) -> SwitchActiveTenant:
+    return build_switch_active_tenant(db_session)
