@@ -2,12 +2,12 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 
-import type { DemoSessionView } from "@/features/demo-data/contracts";
+import type { CurrentSessionView } from "./session-contract";
 
 export type CurrentSessionMode = "authenticated" | "demo";
 
 export type CurrentSessionContextValue = {
-  readonly session: DemoSessionView;
+  readonly session: CurrentSessionView;
   readonly sessionMode: CurrentSessionMode;
 };
 

@@ -65,7 +65,7 @@ export const northstarRetailScenario = {
         id: "metric_ns_search_quality",
         label: "Demo search quality",
         value: "nDCG@10 0.82",
-        status: "processing",
+        status: "ready",
         sourceContext: "Demo evaluation run eval_ns_2026_07_10_r01",
       },
     ],
@@ -256,7 +256,7 @@ export const northstarRetailScenario = {
       baselineComparison:
         "Demo fixture compares hybrid retrieval and matching against a lexical/rules baseline.",
       demoDataNotice:
-        "Demo evaluation context for frontend prototyping; not a verified production measurement.",
+          "Demo evaluation data; not a verified production measurement.",
     },
     auditEvents: [
       {

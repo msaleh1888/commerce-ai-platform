@@ -59,7 +59,7 @@ export const acmeOutletScenario = {
         id: "metric_acme_search_quality",
         label: "Demo search quality",
         value: "nDCG@10 0.78",
-        status: "processing",
+        status: "ready",
         sourceContext: "Demo evaluation run eval_acme_2026_07_11_r01",
       },
     ],
@@ -167,7 +167,7 @@ export const acmeOutletScenario = {
       baselineComparison:
         "Demo fixture compares Acme Outlet search and matching against tenant-local baseline labels.",
       demoDataNotice:
-        "Demo evaluation context for frontend prototyping; not a verified production measurement.",
+        "Demo evaluation data; not a verified production measurement.",
     },
     auditEvents: [
       {

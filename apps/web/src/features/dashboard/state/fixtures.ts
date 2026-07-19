@@ -1,15 +1,16 @@
-import type { DemoSessionView } from "@/features/demo-data/contracts";
+import type { CurrentSessionView } from "@/lib/auth";
 
+import type { DashboardAdapterResult } from "../api";
 import type { DashboardFeatureState } from "../schemas/view-model";
 
-export function createDashboardLoadingState(session: DemoSessionView): DashboardFeatureState {
+export function createDashboardLoadingState(session: CurrentSessionView): DashboardFeatureState {
   return {
     kind: "loading",
     tenantName: session.activeTenant.name,
   };
 }
 
-export const dashboardDeniedStateFixture: DashboardFeatureState = {
+export const dashboardDeniedAdapterFixture: DashboardAdapterResult = {
   kind: "permission_denied",
   tenantName: "Northstar Retail",
   message:

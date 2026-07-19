@@ -1,9 +1,6 @@
 import { getDemoDashboardSummary } from "@/features/demo-data/adapters/dashboard";
-import type {
-  DashboardSummary,
-  DemoScenarioId,
-  DemoSessionView,
-} from "@/features/demo-data/contracts";
+import type { DashboardSummary, DemoScenarioId } from "@/features/demo-data/contracts";
+import type { CurrentSessionView } from "@/lib/auth";
 
 export type DashboardTenantMapping =
   | { readonly kind: "mapped"; readonly scenarioId: DemoScenarioId }
@@ -32,6 +29,11 @@ export function mapDashboardTenantToScenario(tenantId: string): DashboardTenantM
 export type DashboardAdapterResult =
   | { readonly kind: "ready"; readonly summary: DashboardSummary }
   | {
+      readonly kind: "permission_denied";
+      readonly tenantName: string;
+      readonly message: string;
+    }
+  | {
       readonly kind: "error";
       readonly code: "unknown_tenant";
       readonly tenantId: string;
@@ -39,7 +41,7 @@ export type DashboardAdapterResult =
     };
 
 export async function loadDashboardSummaryForSession(
-  session: DemoSessionView,
+  session: CurrentSessionView,
 ): Promise<DashboardAdapterResult> {
   const mapping = mapDashboardTenantToScenario(session.activeTenant.id);
 

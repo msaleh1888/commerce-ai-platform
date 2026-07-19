@@ -5,10 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useCurrentSession } from "@/lib/auth";
 
 import { loadDashboardSummaryForSession } from "../api";
+import type { DashboardFeatureState } from "../schemas/view-model";
 import {
-  createDashboardReadyState,
-  type DashboardFeatureState,
-} from "../schemas/view-model";
+  createDashboardLoadFailedState,
+  createDashboardStateFromAdapterResult,
+} from "../state/dashboard-state";
 import { createDashboardLoadingState } from "../state/fixtures";
 
 export function useDashboardSummary() {
@@ -28,27 +29,11 @@ export function useDashboardSummary() {
           return;
         }
 
-        if (result.kind === "error") {
-          setState({
-            kind: "error",
-            code: result.code,
-            title: "Dashboard data unavailable",
-            message: result.message,
-          });
-          return;
-        }
-
-        setState(createDashboardReadyState(result.summary));
+        setState(createDashboardStateFromAdapterResult(result));
       })
       .catch(() => {
         if (!cancelled) {
-          setState({
-            kind: "error",
-            code: "load_failed",
-            title: "Dashboard data unavailable",
-            message:
-              "The dashboard demo adapter could not load this tenant summary. Retry only reloads local dashboard state.",
-          });
+          setState(createDashboardLoadFailedState());
         }
       });
 
