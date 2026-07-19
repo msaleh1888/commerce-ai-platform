@@ -79,6 +79,15 @@ def test_membership_lookup_requires_tenant_scope(db_session: Session) -> None:
     assert memberships.get_active_for_user(tenant_id="tenant_acme", user_id="user_nora") is None
 
 
+def test_list_active_for_user_returns_only_the_users_active_memberships(db_session: Session) -> None:
+    seed_identity_tenancy(db_session)
+    memberships = MembershipRepository(db_session)
+
+    assert [membership.id for membership in memberships.list_active_for_user(user_id="user_nora")] == [
+        "membership_northstar_nora"
+    ]
+
+
 def test_cross_tenant_membership_mutation_is_denied(db_session: Session) -> None:
     seed_identity_tenancy(db_session)
     memberships = MembershipRepository(db_session)

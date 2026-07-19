@@ -17,10 +17,11 @@ class TenantDTO:
 @dataclass(frozen=True, slots=True)
 class MembershipDTO:
     id: str
-    tenant_id: str
+    tenant: TenantDTO
     user_id: str
     role: Role
     is_active: bool
+    capabilities: frozenset[str]
 
 
 @dataclass(frozen=True, slots=True)

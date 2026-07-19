@@ -32,7 +32,7 @@ def test_resolve_tenant_context_uses_scoped_membership_lookup() -> None:
     assert tenant_context.actor_id == "user_nora"
     assert tenant_context.tenant_id == "tenant_northstar"
     assert tenant_context.role == Role.CATALOG_MANAGER
-    assert "catalog_changes:approve" in tenant_context.capabilities
+    assert "catalog.approval:execute" in tenant_context.capabilities
 
 
 def test_resolve_tenant_context_denies_missing_membership() -> None:
