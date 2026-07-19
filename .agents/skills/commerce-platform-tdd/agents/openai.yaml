@@ -1,0 +1,4 @@
+interface:
+  display_name: "Commerce Platform TDD"
+  short_description: "Run architecture-aware red-green-refactor for this repository."
+  default_prompt: "Use strict vertical-slice TDD while enforcing the commerce platform architecture contract."
