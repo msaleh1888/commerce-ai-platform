@@ -24,7 +24,8 @@ FastAPI API ---------------------> PostgreSQL (authoritative state)
     |                                      audit, workflow status, evaluations
     +------------------------------> Redis (broker, result backend, short-lived locks)
     +------------------------------> Qdrant (derived retrieval projection)
-    +------------------------------> object storage (original upload artifacts)
+    +------------------------------> S3-compatible object storage
+                                      (immutable original upload artifacts)
     +------------------------------> model-provider adapters
     +------------------------------> telemetry exporters
 
@@ -46,7 +47,7 @@ Later MCP/agent gateway --------> authorized API/application use cases only
 | PostgreSQL | authoritative business state, constraints, idempotency records, workflow states, audit, evaluation runs | disposable cache or vector-only state |
 | Redis | broker/backend and short-lived coordination | authoritative catalog, approval, audit, or tenant state |
 | Qdrant | tenant-filtered vector projections and retrieval scores | canonical product state or approval state |
-| Object storage | immutable original upload artifacts and large evaluation artifacts | catalog metadata or mutable workflow authority |
+| Object storage | immutable original upload artifacts and large evaluation artifacts through the ADR 0009 S3-compatible adapter | catalog metadata, import state, row outcomes, idempotency, audit, authorization, or mutable workflow authority |
 | Model adapters | validated calls for embeddings and structured proposals | direct persistence mutation or authorization |
 | Agent/MCP gateway | governed tool adapters, budgets, checkpoints, audit correlation | bypassing API/use cases, direct database access |
 
@@ -78,7 +79,9 @@ A domain MUST NOT import another domain's ORM models or repositories. Cross-doma
 
 PostgreSQL is the source of truth. Each protected business record MUST contain `tenant_id`. Constraints, transactions, foreign keys, and unique indexes enforce invariants that code must not reimplement inconsistently.
 
-Qdrant, Redis, caches, task results, model output, and browser state are non-authoritative. Qdrant projections MUST be rebuilt from PostgreSQL. No repair operation may use Qdrant to overwrite catalog state.
+Object storage stores immutable bytes only under [ADR 0009](adr/0009-s3-compatible-import-artifact-storage.md). PostgreSQL stores authoritative artifact metadata, content hashes, import state, row outcomes, idempotency, audit, and references.
+
+Qdrant, Redis, caches, task results, model output, object storage metadata, and browser state are non-authoritative for business state. Qdrant projections MUST be rebuilt from PostgreSQL. No repair operation may use Qdrant or object storage alone to overwrite catalog state.
 
 ### Tenant isolation
 
@@ -92,7 +95,7 @@ Supplier files, browser requests, model output, retrieved content, and MCP argum
 
 ### Ingestion
 
-`POST import` records an import intent and content hash in PostgreSQL, stores the original artifact, then enqueues a task using only durable IDs and tenant context. The task invokes the ingestion use case, which transitions durable state, records row outcomes, and schedules downstream work. A retry reads current state and produces no duplicate effective product changes.
+`POST import` records an import intent and content hash in PostgreSQL, stores the original artifact through the approved S3-compatible adapter, records artifact metadata, then enqueues a task using only durable IDs and tenant context. The task invokes the ingestion use case, which transitions durable state, records row outcomes, and schedules downstream work. A retry reads current PostgreSQL state, verifies immutable artifact bytes by hash/size when needed, and produces no duplicate effective product changes.
 
 ### Indexing and search
 

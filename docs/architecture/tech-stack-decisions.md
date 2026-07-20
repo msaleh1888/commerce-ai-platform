@@ -170,6 +170,35 @@ pgvector would simplify infrastructure and may be enough early, but separating v
 - PostgreSQL plus pgvector is proven sufficient and reduces operational burden.
 - Hybrid lexical/vector ranking requires a search engine such as OpenSearch or Vespa.
 
+## Object Storage
+
+### Choice
+
+Use an S3-compatible object-storage abstraction for immutable original catalog upload bytes and large immutable evidence artifacts. Use MinIO as the Docker Compose local implementation. Use a managed S3-compatible provider in production-like deployments behind the same approved adapter contract.
+
+PostgreSQL remains authoritative for import records, artifact metadata, content hashes, workflow state, row outcomes, idempotency records, audit references, and evaluation run records. Object storage holds immutable bytes only.
+
+This decision is governed by [ADR 0009](adr/0009-s3-compatible-import-artifact-storage.md).
+
+### Alternatives Considered
+
+- PostgreSQL large-object or bytea storage for original uploads.
+- Local filesystem storage.
+- Provider-specific cloud SDK usage directly from use cases.
+- Redis, Celery results, Qdrant, browser state, or task logs as artifact storage.
+
+### Why This Choice
+
+Catalog imports need durable original bytes for retry, duplicate detection, row provenance, audit, and evidence. S3-compatible storage keeps those bytes outside the relational source of truth while preserving a portable local-to-production contract. MinIO fits the required Docker Compose topology and lets API and worker processes exercise the same object-storage boundary locally.
+
+Keeping PostgreSQL authoritative prevents object storage from becoming a second business database. Browser state, Redis, Celery result metadata, Qdrant, and logs are not durable artifact authorities and cannot decide whether an import exists or has completed.
+
+### Reconsider When
+
+- A production deployment target cannot provide S3-compatible storage.
+- Artifact immutability, retention, encryption, or legal-hold requirements exceed the selected provider.
+- Evaluation artifacts need a specialized artifact-management platform with a new ADR.
+
 ## Cache, Queue, and Coordination
 
 ### Choice
@@ -565,7 +594,7 @@ Commerce matching preferences, approved decisions, and merchant-specific normali
 
 ### Choice
 
-Use small deterministic fixture files for local demos, CI smoke tests, import examples, prompt-injection cases, and evaluation seeds; move large datasets to external artifact storage later.
+Use small deterministic fixture files for local demos, CI smoke tests, import examples, prompt-injection cases, and evaluation seeds; move large datasets and immutable original uploads to the approved S3-compatible artifact storage path from [ADR 0009](adr/0009-s3-compatible-import-artifact-storage.md).
 
 ### Alternatives Considered
 
@@ -575,7 +604,7 @@ Use small deterministic fixture files for local demos, CI smoke tests, import ex
 
 ### Why This Choice
 
-The project needs repeatable evidence. Small checked-in fixtures make tests and demos deterministic. Larger datasets such as Amazon ESCI or WDC subsets should not be committed wholesale; they need documented acquisition, frozen subsets, manifests, and eventually artifact storage.
+The project needs repeatable evidence. Small checked-in fixtures make tests and demos deterministic. Larger datasets such as Amazon ESCI or WDC subsets should not be committed wholesale; they need documented acquisition, frozen subsets, manifests, and approved artifact storage.
 
 Procedural data can be useful, but it often feels fake and weakens portfolio credibility. Dynamic fetches make CI and local demos fragile.
 

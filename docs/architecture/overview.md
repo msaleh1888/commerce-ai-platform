@@ -22,10 +22,12 @@ flowchart TD
     API --> PG["PostgreSQL source of truth"]
     API --> Redis["Redis broker/cache"]
     API --> Q["Qdrant derived retrieval index"]
+    API --> Obj["S3-compatible object storage"]
     API --> Celery["Celery queues"]
     Celery --> Worker["Worker process"]
     Worker --> PG
     Worker --> Q
+    Worker --> Obj
     Worker --> Models["Embedding/model provider"]
     API --> Logs["Structured logs and basic metrics"]
     Worker --> Logs
@@ -57,13 +59,13 @@ flowchart TD
 
 ## Source of Truth
 
-PostgreSQL owns business state. Qdrant stores derived retrieval records and can be rebuilt from PostgreSQL. Redis is used for queueing, locks, and short-lived coordination, not authoritative business state.
+PostgreSQL owns business state. S3-compatible object storage stores immutable original upload bytes and large immutable evidence artifacts only, as governed by [ADR 0009](adr/0009-s3-compatible-import-artifact-storage.md). Qdrant stores derived retrieval records and can be rebuilt from PostgreSQL. Redis is used for queueing, locks, and short-lived coordination, not authoritative business state.
 
 ## Data Flow
 
 1. User submits catalog import through the web app.
-2. API validates request, records import metadata, and enqueues work.
-3. Worker parses rows, validates schema, stores raw and normalized product data.
+2. API validates request, stores immutable original bytes through the object-storage adapter, records import/artifact metadata in PostgreSQL, and enqueues work.
+3. Worker reloads tenant-scoped import metadata, verifies artifact bytes when needed, parses rows, validates schema, and stores raw and normalized product data.
 4. Worker generates retrieval records and writes them to Qdrant after PostgreSQL commits.
 5. Worker generates duplicate candidates and review cases.
 6. User searches products through the API; retrieval is tenant-filtered.

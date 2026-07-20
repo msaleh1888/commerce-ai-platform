@@ -176,6 +176,7 @@ Implement the first real operational workflow: importing messy catalog data safe
 - Row-level errors.
 - Import UI and status UI.
 - Audit events for import lifecycle.
+- Vertical implementation plan: [M3 Catalog Import Implementation Plan](m3-catalog-import-implementation-plan.md).
 
 ### Acceptance Criteria
 
@@ -408,4 +409,3 @@ The final release satisfies the project requirements when it has evidence across
 - Performance: latency, throughput, error rate, and queue age are measured.
 - Operability: failures can be detected, diagnosed, recovered, and rolled back.
 - Presentation: README, demo video, screenshots, and case studies are clear enough for hiring and client acquisition.
-
