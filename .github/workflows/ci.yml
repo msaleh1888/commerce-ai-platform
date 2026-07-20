@@ -58,11 +58,33 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
       - name: Run frontend tests
         run: npm run test
 
       - name: Typecheck frontend
         run: npm run typecheck
+
+      - name: Run Playwright screenshot smoke tests
+        run: npm run test:smoke:screenshots
+
+      - name: Upload Playwright screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-screenshots
+          path: apps/web/tests/playwright/.artifacts/screenshots
+          if-no-files-found: error
+
+      - name: Upload Playwright diagnostic artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-diagnostics
+          path: |
+            apps/web/tests/playwright/.artifacts/html-report
+            apps/web/tests/playwright/.artifacts/test-results
 
       - name: Build frontend
         run: npm run build

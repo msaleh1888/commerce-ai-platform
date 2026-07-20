@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test": "node --test src/styles/tokens.test.mjs && node --test src/components/ui/ui-primitives.test.mjs && node --test src/components/layout/app-shell.test.mjs && node --test src/features/review/tests/review-boundaries.test.mjs && tsx --test src/features/demo-data/tests/demo-data.test.ts && tsx --test src/features/dashboard/tests/dashboard.test.ts && tsx --test src/features/review/tests/review.test.ts",
+    "test:smoke:screenshots": "playwright test --config=playwright.config.ts",
     "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^24.0.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
