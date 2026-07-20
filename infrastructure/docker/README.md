@@ -16,7 +16,7 @@ Local Docker Compose runtime for the M1 technical foundation.
 From the repository root:
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
 Run migrations explicitly after PostgreSQL is healthy:
@@ -24,6 +24,15 @@ Run migrations explicitly after PostgreSQL is healthy:
 ```bash
 docker compose run --rm api python -m alembic -c apps/api/alembic.ini upgrade head
 ```
+
+Apply the deterministic M2 identity and tenancy seed:
+
+```powershell
+$env:COMMERCE_AI_DEMO_SEED_PASSWORD = "<choose-a-local-demo-password>"
+docker compose run --rm -e COMMERCE_AI_DEMO_SEED_PASSWORD api python -m commerce_ai_api.scripts.seed_demo --apply
+```
+
+The local password is not part of the fixture or repository. It applies to all seeded users, including `nora.manager@northstar.example`, and an existing seeded user's password remains unchanged on repeat runs.
 
 ## Smoke Checks
 

@@ -8,6 +8,7 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY apps/api ./apps/api
 COPY apps/worker ./apps/worker
+COPY datasets/fixtures ./datasets/fixtures
 
 RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir -e ".[dev]"
