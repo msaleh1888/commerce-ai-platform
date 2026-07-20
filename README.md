@@ -4,7 +4,9 @@ Commerce AI Platform is a portfolio SaaS project for multi-tenant commerce opera
 
 ## Project Status
 
-The repository is in Milestone M1: Technical Foundation. Current work is limited to the project foundation and does not include M2 UI polish or production-ready runtime code yet.
+The repository has completed M1 technical foundation and M2 identity, tenancy, authenticated app-shell, dashboard, and duplicate-review prototype work. M3 catalog ingestion is the next product milestone.
+
+The M2 review workspace is an interactive prototype. Its review actions update feature-local presentation state only: they do not persist a review decision, execute an approval, mutate catalog data, or create an audit event. Durable, idempotent approval execution begins in M6.
 
 ## Repository Layout
 
@@ -119,7 +121,7 @@ Worker settings use the `COMMERCE_AI_WORKER_` environment variable prefix and ar
 The full M1 runtime can start PostgreSQL, Redis, Qdrant, API, worker, and web services:
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
 Run database migrations explicitly after PostgreSQL is healthy:
@@ -127,6 +129,15 @@ Run database migrations explicitly after PostgreSQL is healthy:
 ```bash
 docker compose run --rm api python -m alembic -c apps/api/alembic.ini upgrade head
 ```
+
+Apply the deterministic M2 identity and tenancy seed after migrations:
+
+```powershell
+$env:COMMERCE_AI_DEMO_SEED_PASSWORD = "<choose-a-local-demo-password>"
+docker compose run --rm -e COMMERCE_AI_DEMO_SEED_PASSWORD api python -m commerce_ai_api.scripts.seed_demo --apply
+```
+
+The password is chosen locally; it is not stored in the fixture or repository. The seed creates or updates the demo users and memberships only. It preserves an existing user's password hash on repeated runs, so reset local Compose volumes before reseeding if a different password is required. Use `nora.manager@northstar.example` to sign in as the Northstar catalog manager.
 
 Smoke checks:
 
@@ -146,14 +157,17 @@ docker compose down
 
 ## CI
 
-GitHub Actions runs on pull requests. The CI skeleton validates the current M1 foundation with:
+GitHub Actions runs on pull requests. It validates backend, frontend, architecture, migrations, screenshot smoke coverage, and the Compose-backed M2 seed-and-login acceptance path.
 
 ```bash
-python -m pytest tests/unit/api tests/unit/worker
+python -m pytest tests/unit tests/integration
 python tools/architecture/check_boundaries.py
 python -m alembic -c apps/api/alembic.ini upgrade head --sql
-docker compose config --quiet
+docker compose up --build --wait api
+COMMERCE_AI_DEMO_SEED_PASSWORD=ci-only-value \
+  docker compose run --rm -e COMMERCE_AI_DEMO_SEED_PASSWORD api python -m commerce_ai_api.scripts.seed_demo --apply
 cd apps/web && npm run typecheck
+cd apps/web && npm run test:smoke:screenshots
 cd apps/web && npm run build
 ```
 
@@ -179,6 +193,6 @@ PostgreSQL is the source of truth, Qdrant is a derived retrieval index, and Redi
 - [Implementation standards](docs/architecture/implementation-guide.md)
 - [v0 design capture](docs/ux/v0-design-capture.md)
 
-## Next Foundation Issues
+## Next Product Milestone
 
-M1 continues with CI and the fixture data plan with seed command stub.
+M3 implements the first real supplier-catalog import and normalization workflow.

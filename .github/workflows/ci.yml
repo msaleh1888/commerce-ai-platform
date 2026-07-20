@@ -99,3 +99,30 @@ jobs:
 
       - name: Validate Docker Compose config
         run: docker compose config --quiet
+
+      - name: Start API runtime
+        run: docker compose up --build --wait api
+
+      - name: Apply database migrations
+        run: docker compose run --rm api python -m alembic -c apps/api/alembic.ini upgrade head
+
+      - name: Apply M2 demo identity and tenancy seed
+        env:
+          COMMERCE_AI_DEMO_SEED_PASSWORD: ci-only-demo-password
+        run: docker compose run --rm -e COMMERCE_AI_DEMO_SEED_PASSWORD api python -m commerce_ai_api.scripts.seed_demo --apply
+
+      - name: Authenticate a seeded demo user
+        env:
+          COMMERCE_AI_DEMO_SEED_PASSWORD: ci-only-demo-password
+        run: |
+          cookie_jar="$RUNNER_TEMP/commerce-ai-session-cookie.txt"
+          curl --fail --silent --show-error --cookie-jar "$cookie_jar" \
+            --header 'Content-Type: application/json' \
+            --data "{\"email\":\"nora.manager@northstar.example\",\"password\":\"${COMMERCE_AI_DEMO_SEED_PASSWORD}\"}" \
+            http://localhost:8000/auth/login
+          curl --fail --silent --show-error --cookie "$cookie_jar" http://localhost:8000/auth/session \
+            | grep --fixed-strings '"email":"nora.manager@northstar.example"'
+
+      - name: Tear down Docker Compose runtime
+        if: always()
+        run: docker compose down -v

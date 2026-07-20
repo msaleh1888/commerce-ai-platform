@@ -4,6 +4,10 @@
 
 Show a complete AI commerce operations workflow in under five minutes. The demo should make the project feel like a real SaaS application, not a disconnected benchmark or chatbot.
 
+## Current M2 Limitation
+
+This script describes the completed MVP workflow, not the current M2 prototype. In M2, the review workspace presents deterministic local evidence and its decision buttons change feature-local presentation state only. No review decision is persisted, no approval is executed, no catalog record changes, and no audit event is created. Durable duplicate review and approval execution begin in M6.
+
 ## Demo Setup
 
 - Demo tenant: Northstar Retail.
@@ -152,4 +156,3 @@ End with four evidence bullets:
 ## Demo Rule
 
 Do not spend demo time explaining every future feature. Mention agents, MCP, memory, and Kubernetes only as roadmap items after the MVP workflow is credible.
-
