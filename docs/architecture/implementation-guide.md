@@ -22,6 +22,7 @@ When no approved rule applies, the implementer MUST stop and create or request a
 - A worker task MUST deserialize stable identifiers, tenant context, and operation ID; resolve a use case through the worker composition root; and call it.
 - A worker task MUST NOT query repositories/ORM models directly or implement business transitions itself.
 - Every durable state transition MUST have a named idempotency/operation key or a database constraint that makes duplicate effective execution impossible.
+- A durable state transition that requires asynchronous delivery MUST commit its transition, required audit event, and transactional outbox record in the same PostgreSQL transaction. A dispatcher use case publishes from that durable record; routes and worker tasks MUST NOT publish directly to the broker.
 
 ## Frontend
 

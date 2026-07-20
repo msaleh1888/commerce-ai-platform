@@ -47,6 +47,8 @@ Use an S3-compatible object-storage abstraction for immutable original catalog u
 
 M3 local development and CI-like Compose environments use MinIO as the S3-compatible implementation. Production or production-like deployments use a managed S3-compatible provider behind the same approved adapter contract.
 
+The local bucket is `commerce-ai-import-artifacts`. Production-like buckets use `commerce-ai-<environment>-import-artifacts`; the deployment supplies the environment value. Both API and worker use the same configuration contract: endpoint, region, bucket, access key, secret key, and TLS setting. Credentials are separate from PostgreSQL and are never exposed to the browser.
+
 PostgreSQL stores authoritative import and artifact metadata only:
 
 - tenant ID;
@@ -77,15 +79,17 @@ The approved import-artifact storage seam is:
 The contract MUST support:
 
 - put original bytes once with tenant/import scoped metadata;
-- read original bytes by tenant-scoped artifact reference for processing/retry;
+- read the recorded object version by tenant-scoped artifact reference for processing/retry;
 - verify stored object hash/size against PostgreSQL metadata;
 - fail safely when an object exists with a different hash or size;
-- return no provider-specific object identity across application boundaries except a safe opaque reference/key; and
+- return no provider-specific object identity across application boundaries except a safe opaque reference; and
 - avoid exposing presigned read/write URLs to the browser in M3 unless a later ADR approves browser-direct upload/download.
+
+The reservation records the deterministic key from the tenant ID, source ID, and SHA-256 content hash before storage. Original filenames are metadata only and never become path segments. The adapter performs a conditional create and returns the provider object version ID. The following metadata transaction persists that version ID. If that transaction does not commit, retry reads the reserved deterministic key, verifies the provider object hash and byte size, obtains its version ID, and completes the one effective metadata transition. Reads after metadata exists use the recorded version ID and verify SHA-256 and byte size before parsing. The runtime storage role has no delete permission and cannot overwrite an existing immutable key; bucket versioning is enabled in MinIO and production-like deployments. No automatic expiration or application-initiated deletion is permitted during the MVP. Local Compose volumes are disposable test/development state; production-like buckets require TLS in transit and provider-managed encryption at rest.
 
 ## Consequences
 
-- Docker Compose must eventually include MinIO before M3 runtime code can execute imports.
+- Docker Compose includes MinIO and deterministic bucket/versioning/policy provisioning before M3 runtime code can execute imports.
 - Object keys and bucket names become implementation details of the provider adapter, not business identifiers.
 - PostgreSQL remains the only durable authority for whether an import exists, which tenant owns it, what its state is, and whether a duplicate upload has already been handled.
 - Import recovery can compare PostgreSQL metadata with object storage bytes, but object storage alone cannot create or repair authoritative import state.
@@ -111,8 +115,10 @@ The contract MUST support:
 
 ## Failure and Retry Behavior
 
-- If object storage write fails before metadata reaches `artifact_stored`, the import creation fails or remains in a safe failed state without enqueueing processing.
-- If metadata write fails after a successful object write, retry uses the content hash and intended tenant/import scope to reach one effective metadata record or marks the orphan for operational cleanup; the object alone is not authoritative.
+- `CreateImport` first commits a tenant-scoped import reservation in PostgreSQL. No storage write is attempted unless that reservation exists.
+- The reservation owns the deterministic artifact reference. If the conditional object write succeeds but the later metadata transition fails, retry reloads that reservation, reads the reserved key, verifies the object hash/size, obtains its provider version, and completes the one effective metadata transition. There is no untracked orphan-object path.
+- If object storage write fails, the reservation transitions to a safe failed state without enqueueing processing. A failed reservation contains no authoritative artifact metadata.
+- `artifact_stored -> queued` and the durable import-dispatch outbox record commit in the same PostgreSQL transaction under ADR 0010. A broker publish failure leaves the outbox undispatched for retry; it cannot silently lose an import.
 - If a duplicate upload has the same tenant-approved duplicate scope and content hash, the use case returns the documented duplicate-content outcome without storing duplicate effective products, row outcomes, or audit events.
 - If a retry finds the object exists with the expected hash and size, it may continue from durable PostgreSQL state.
 - If a retry finds a missing object, mismatched hash, mismatched size, or access denial, the import transitions to a safe retryable or failed state according to the catalog-ingestion state machine and records audit-worthy evidence.
@@ -123,7 +129,8 @@ The contract MUST support:
 M3 implementation PRs must add tests at the lowest meaningful layer and through the public boundary:
 
 - provider contract tests using the configured S3-compatible local implementation or a deterministic fake at unit level;
-- import creation tests proving metadata and artifact storage transition together without duplicate effective state;
+- import creation tests proving reservation recovery, conditional create, recorded version reads, and metadata/artifact transition without duplicate effective state;
+- storage-policy tests proving the application role cannot overwrite or delete an artifact and that a mismatched object version/hash fails closed;
 - worker retry tests for object already present, missing object, hash mismatch, and transient provider failure;
 - tenant isolation tests proving Tenant B cannot read, retry, process, or infer Tenant A artifact metadata or bytes;
 - duplicate upload tests proving replay creates zero duplicate effective supplier products, row outcomes, and audit events;
@@ -147,15 +154,8 @@ This documentation PR runs only documentation-appropriate checks.
 - [Architecture Overview](../overview.md)
 - [M3 Catalog Import Implementation Plan](../../planning/m3-catalog-import-implementation-plan.md)
 
-## Decisions Deferred to M3-01
+## Initial Upload Boundary
 
-M3-01 must record these prerequisites before implementation proceeds:
+M3 accepts only `text/csv` UTF-8 or UTF-8-with-BOM, comma-delimited, RFC 4180-compatible files with a header row, and `application/json` UTF-8 files whose top level is an array of objects. The API does not trust the browser MIME type: it validates the declared type and bounded input shape before storage and parsing. The initial limits are 50 MiB per file, 50,000 rows, 256 columns, and 64 KiB per field. Unsupported media types, encoding, structure, delimiter, or limit violations produce a safe import failure reason; they never trigger heuristic parsing.
 
-- exact object-storage configuration names for local MinIO and managed S3-compatible providers;
-- bucket or logical namespace naming convention;
-- object key format and collision policy;
-- maximum upload size and supported MIME/media-type validation;
-- allowed CSV/JSON encodings and parser limits;
-- artifact cleanup policy for failed pre-metadata writes;
-- provider-level encryption and retention settings for local and production-like deployments;
-- Open Icecat access path, exact licence/attribution terms, first corpus size, corpus-specific thresholds, and acquired artifact location in the first M3 manifest.
+The first M3 manifest still must record the Open Icecat access path, exact licence/attribution terms, first corpus size, corpus-specific thresholds, and acquired artifact reference. Those acquisition facts remain deliberately uninvented.

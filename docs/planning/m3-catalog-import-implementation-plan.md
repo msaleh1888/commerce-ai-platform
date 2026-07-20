@@ -2,176 +2,110 @@
 
 ## Purpose
 
-M3 delivers the first real customer workflow: a catalog manager uploads supplier CSV/JSON, processing runs asynchronously, valid rows become normalized supplier products, invalid rows keep row-level reasons, duplicate/retry behavior is idempotent, and real-data acceptance evidence proves the result.
+M3 delivers the first real customer workflow: a catalog manager imports a supplier catalog safely and can understand the durable result. Every implementation PR in this plan must deliver a testable customer outcome through the real API, PostgreSQL, object storage, Celery worker, and web application. Infrastructure-only or backend-only PRs are not M3 delivery slices.
 
-This plan is implementation guidance only. It is governed by:
+This plan is governed by the Final Target Architecture, Canonical Backend Architecture, Catalog Ingestion Contract, Data Validation and Evidence Contract, Implementation Guide, and ADRs 0002 through 0010.
 
-- [Final Target Architecture](../architecture/final-target-architecture.md)
-- [Canonical Backend Architecture](../architecture/canonical-backend-architecture.md)
-- [Catalog Ingestion Contract](../architecture/catalog-ingestion-contract.md)
-- [Data Validation and Evidence Contract](../architecture/data-validation-and-evidence-contract.md)
-- [Tech Stack Decisions](../architecture/tech-stack-decisions.md)
-- [ADR 0002](../architecture/adr/0002-postgres-source-of-truth-qdrant-derived-index.md)
-- [ADR 0003](../architecture/adr/0003-shared-schema-multi-tenancy.md)
-- [ADR 0004](../architecture/adr/0004-celery-idempotent-processing.md)
-- [ADR 0006](../architecture/adr/0006-versioned-evaluation-manifests.md)
-- [ADR 0007](../architecture/adr/0007-architecture-governance-and-canonical-boundaries.md)
-- [ADR 0008](../architecture/adr/0008-application-managed-demo-auth-and-active-tenant-context.md)
-- [ADR 0009](../architecture/adr/0009-s3-compatible-import-artifact-storage.md)
+## Approved Preconditions
 
-## M3-01 Prerequisites
+The following are already decided and MUST NOT be reinvented by an implementation agent:
 
-M3-01 must complete these decisions and setup items before any import runtime path is merged:
+- MinIO is the local/Compose S3-compatible implementation; `commerce-ai-import-artifacts` is its versioned import bucket.
+- Production-like buckets use `commerce-ai-<environment>-import-artifacts` through the same adapter configuration contract.
+- Artifact keys derive from tenant ID, source ID, and SHA-256; original filenames are metadata only.
+- The reservation persists the deterministic key and expected SHA-256/byte size before storage. The adapter conditionally creates the immutable object; a successful metadata transaction records the provider version ID. Recovery verifies the reserved key/hash/size, records the observed version, and reads that version before parsing.
+- Application storage roles cannot overwrite or delete artifacts. MVP import artifacts have no automatic expiration.
+- Import intake first creates a PostgreSQL reservation. Artifact metadata, the `queued` transition, initial audit event, and outbox record commit together after successful object storage.
+- ADR 0010 transactional outbox dispatch is the only approved PostgreSQL-to-Celery handoff.
+- Initial intake accepts `text/csv` UTF-8/UTF-8-with-BOM, comma-delimited RFC 4180 headered CSV and `application/json` UTF-8 arrays of objects only; limits are 50 MiB, 50,000 rows, 256 columns, and 64 KiB per field. `m3_supplier_v1` maps the headers and required fields defined by the Catalog Ingestion Contract.
+- Source-specific Open Icecat access, licence/attribution, corpus size, thresholds, and acquired artifact references remain acquisition-time manifest facts. They must not be invented.
 
-- Record exact object-storage configuration names for local MinIO and managed S3-compatible providers.
-- Record bucket or logical namespace naming convention.
-- Record object key format and collision policy.
-- Record maximum upload size and supported MIME/media-type validation.
-- Record allowed CSV/JSON encodings and parser limits.
-- Record artifact cleanup policy for failed pre-metadata writes.
-- Record provider-level encryption and retention settings for local and production-like deployments.
-- Add the local MinIO Compose service only after the above are documented.
-- Add the provider interface and S3-compatible adapter only behind `catalog_ingestion.application` and `catalog_ingestion.infrastructure.providers`.
-- Record Open Icecat access path, exact licence/attribution terms, first corpus size, corpus-specific thresholds, and acquired artifact location in the first M3 manifest before data acquisition.
+## Required TDD Execution
 
-## Vertical 1: Valid CSV/JSON Import Completes Asynchronously
+Every implementation PR follows one vertical slice at a time: add the named failing behavior test, run its focused command and confirm the expected failure, make the smallest architecture-compliant change, rerun it green, then run the listed affected suite. A developer does not begin the next slice while the current one is red. Browser validation follows the completed slice; it never substitutes for API, persistence, worker, or tenant-isolation coverage.
 
-Customer outcome: a catalog manager uploads a valid CSV or JSON file, sees the import progress asynchronously, and finds normalized supplier products persisted for the active tenant.
+## M3-01: Valid Import Completes Asynchronously
 
-### M3-01: Artifact Storage Foundation
+**Customer outcome:** A Catalog Manager uploads one valid CSV or JSON supplier catalog, sees `queued -> processing -> completed`, and can inspect normalized supplier-product rows, raw source values, provenance, counts, and import lifecycle audit history for the active tenant.
 
 | Field | Plan |
 | --- | --- |
-| Owner | Backend/infra owner. |
-| Permitted files | `docs/architecture/**`, `docs/planning/**`, `infrastructure/docker/**`, `apps/api/src/commerce_ai_api/modules/catalog_ingestion/**`, `apps/api/src/commerce_ai_api/core/**`, `apps/worker/src/commerce_ai_worker/**`, `tests/unit/catalog_ingestion/**`, `tests/integration/persistence/**`, `tests/architecture/**`. |
-| Approved seam | `catalog_ingestion.application` provider contract with S3-compatible implementation under `catalog_ingestion.infrastructure.providers`; API and worker composition roots wire the adapter. |
-| Red test | Import artifact storage contract test fails for put/read/verify by tenant-scoped reference; architecture test fails if routes/tasks import an object-storage SDK. |
-| Green implementation | Add MinIO Compose configuration, settings, provider interface, adapter, deterministic fake for unit tests, and hash/size verification. |
-| Customer end-to-end validation | Upload path can store immutable bytes and return a safe artifact reference without exposing raw bytes or provider credentials. |
-| Tenant/authorization implications | Artifact metadata is tenant-protected; actor must have import capability before storage. Object keys are not authorization. |
-| Audit/idempotency implications | Operation ID and content hash are available before processing; duplicate put with same hash is safe, mismatch fails. |
-| Merge dependency | This ADR PR merged; M2 auth/tenant context available; M3-01 prerequisite decisions recorded. |
+| Owner | Full-stack import owner. |
+| Permitted files | `docker-compose.yml`, `infrastructure/docker/**`, `apps/api/src/commerce_ai_api/modules/{catalog_ingestion,normalization,catalog,audit}/**`, import-specific API routes/schemas/dependencies, API and worker composition roots, `apps/web/src/features/imports/**`, `apps/web/src/app/(app)/imports/**`, the approved API client boundary, import fixtures, migrations, and import-focused tests only. |
+| Approved seam | `POST /imports` resolves actor/tenant and calls `CreateImport`; the use case owns reservation, storage, transaction, audit, and outbox. The dispatcher invokes Celery; `ProcessImport(import_id, tenant_id, operation_id, correlation_id)` calls one use case; the import UI calls typed import API functions only. |
+| Vertical slice order | 1. Reject an unsupported or unauthorized upload at `POST /imports`. 2. Create a valid reservation, immutable artifact metadata, audit event, and pending outbox record. 3. Dispatch and process the valid import to one completed supplier-product result despite duplicate task delivery. 4. Render typed upload, queued/processing/completed detail, provenance, counts, and audit history without a fixture fallback. |
+| Red tests and focused commands | `test_catalog_manager_upload_creates_one_queued_import_with_an_outbox_record` and tenant/role denials: `pytest tests/integration/api/test_import_routes.py -q`. `test_process_import_completes_one_tenant_scoped_supplier_product_on_duplicate_delivery`: `pytest tests/integration/worker/test_import_tasks.py -q`. `test_import_feature_renders_completed_status_from_api_view_model`: `npm --prefix apps/web exec tsx --test src/features/imports/tests/imports.test.ts`. |
+| Green implementation | Add MinIO provisioning/configuration, provider adapter, reservation/import/artifact/outbox/audit/product migrations, CSV/JSON valid-path parsing, normalization, supplier-product persistence, dispatcher/task wiring, import status query, and import upload/detail UI. |
+| Affected-suite verification | `pytest tests/unit/catalog_ingestion tests/integration/api/test_import_routes.py tests/integration/worker/test_import_tasks.py tests/integration/persistence/test_import_persistence.py -q`; `npm --prefix apps/web run test`; `npm --prefix apps/web run typecheck`; `python tools/architecture/check_boundaries.py`; `git diff --check`. |
+| Customer validation | In Compose, seed and authenticate Northstar Catalog Manager; upload one valid CSV and one valid JSON fixture through the browser; observe terminal `completed`; inspect counts, normalized values, immutable source provenance, and audit history; verify Acme cannot access any Northstar record. |
+| Tenant/authorization | API resolves active tenant and `catalog.import:write`/read capability; repositories, outbox, worker payload, artifact read, product write, and audit query carry tenant scope. |
+| Audit/idempotency | One initial lifecycle audit event and one processing-completed event per effective operation; duplicate Celery delivery creates no duplicate effective supplier products or audit events. |
+| Merge dependency | ADR 0009 and ADR 0010 merged. |
 
-### M3-02: Import Intent API and Persistence
+## M3-02: Mixed-Validity Import Reaches Partial Success
+
+**Customer outcome:** A Catalog Manager imports a mixed-validity file; valid rows become supplier products while invalid rows remain inspectable with safe reasons, and the import reaches `partial` rather than hiding the problem.
 
 | Field | Plan |
 | --- | --- |
-| Owner | Backend owner. |
-| Permitted files | `apps/api/src/commerce_ai_api/modules/catalog_ingestion/**`, `apps/api/src/commerce_ai_api/api/routes/**`, `apps/api/src/commerce_ai_api/api/schemas/**`, `apps/api/src/commerce_ai_api/db/**`, `tests/unit/catalog_ingestion/**`, `tests/integration/api/**`, `tests/integration/persistence/**`. |
-| Approved seam | FastAPI route calls one `CreateImport` use case; repositories own tenant-scoped import/source/artifact metadata; migrations create protected tables. |
-| Red test | Authenticated catalog manager upload returns created import and `artifact_stored`; viewer/other tenant upload/read is denied; route has no repository/provider direct access. |
-| Green implementation | Add import/source/artifact metadata models, repository, state transitions, upload DTOs, and API endpoint that stores bytes before enqueue. |
-| Customer end-to-end validation | User uploads a small valid fixture and receives import ID, status, counts initialized to zero, content hash, and safe artifact reference. |
-| Tenant/authorization implications | Active tenant comes from session; import capability required; all reads scoped to tenant. |
-| Audit/idempotency implications | Record operation ID, content hash, and initial lifecycle audit event once. |
+| Owner | Full-stack import-quality owner. |
+| Permitted files | `apps/api/src/commerce_ai_api/modules/{catalog_ingestion,normalization,catalog,audit}/**`, import API route/schema/query files, `apps/web/src/features/imports/**`, `apps/web/src/app/(app)/imports/**`, mixed-validity fixtures, and import-focused tests only. |
+| Approved seam | `ProcessImport` persists row outcomes through catalog-ingestion contracts; import status query returns safe paginated row outcomes; the import feature renders API view models and has no fixture fallback. |
+| Vertical slice order | 1. Persist one stable result for every source row and enforce row conservation. 2. Expose safe, paginated row outcomes and a `partial` import result. 3. Render partial success, row failures, loading, empty, error, and permission-denied states from typed API data. |
+| Red tests and focused commands | `test_mixed_import_conserves_accepted_rejected_and_quarantined_rows`: `pytest tests/unit/catalog_ingestion/test_row_outcomes.py -q`. `test_import_rows_are_tenant_scoped_and_paginated`: `pytest tests/integration/api/test_import_rows_routes.py -q`. `test_import_feature_distinguishes_partial_from_failed`: `npm --prefix apps/web exec tsx --test src/features/imports/tests/imports.test.ts`. |
+| Green implementation | Add row outcome persistence, source-row references, safe reason codes, row-conservation counts, `partial` transition, safe pagination, and partial-success/error/empty/loading UI states. |
+| Affected-suite verification | `pytest tests/unit/catalog_ingestion tests/integration/api/test_import_routes.py tests/integration/api/test_import_rows_routes.py tests/integration/worker/test_import_tasks.py -q`; `npm --prefix apps/web run test`; `npm --prefix apps/web run typecheck`; `python tools/architecture/check_boundaries.py`; `git diff --check`. |
+| Customer validation | Upload a mixed CSV; see valid rows retained, invalid rows explained without unrestricted raw content leakage, and a `partial` status with accurate counts and audit history. |
+| Tenant/authorization | Import and row queries require active-tenant import-read authorization; Tenant B receives no rows, counts, or failure details. |
+| Audit/idempotency | Partial terminal transition and summary are written once; a retry reuses row identity and does not duplicate outcomes. |
 | Merge dependency | M3-01. |
 
-### M3-03: Asynchronous Processing and Normalized Supplier Products
+## M3-03: Duplicate Upload and Recovery Are Safe
+
+**Customer outcome:** A Catalog Manager can re-upload the same source file or recover a transient processing failure without duplicate supplier products, row outcomes, or lifecycle audit events.
 
 | Field | Plan |
 | --- | --- |
-| Owner | Backend/worker owner. |
-| Permitted files | `apps/api/src/commerce_ai_api/modules/catalog_ingestion/**`, `apps/api/src/commerce_ai_api/modules/normalization/**`, `apps/api/src/commerce_ai_api/modules/catalog/**`, `apps/worker/src/commerce_ai_worker/**`, `tests/unit/catalog_ingestion/**`, `tests/unit/normalization/**`, `tests/integration/worker/**`, `tests/integration/api/**`. |
-| Approved seam | Worker task deserializes `ProcessImport(import_id, tenant_id, operation_id, correlation_id)` and calls `ProcessImport` use case; catalog persistence happens only through approved catalog application contracts. |
-| Red test | Queued valid CSV/JSON import remains unprocessed until worker runs, then reaches `completed`; task retry does not create duplicate products. |
-| Green implementation | Add parser, validation, normalization, product creation contract, task wiring, durable state transitions, and status query endpoint. |
-| Customer end-to-end validation | Catalog manager uploads valid CSV/JSON, sees processing complete, and browses resulting supplier products with raw and normalized fields. |
-| Tenant/authorization implications | Worker re-loads tenant-scoped import and writes tenant-scoped products only. |
-| Audit/idempotency implications | Processing lifecycle and product creation emit idempotent audit events tied to operation/import IDs. |
-| Merge dependency | M3-02. |
+| Owner | Backend/worker reliability owner. |
+| Permitted files | `apps/api/src/commerce_ai_api/modules/{catalog_ingestion,catalog,audit}/**`, import API route/schema/query files, worker task/composition files, `apps/web/src/features/imports/**`, import-focused fixtures, and integration/worker/browser tests only. |
+| Approved seam | `CreateImport` enforces tenant-approved duplicate-content scope through PostgreSQL constraints; outbox dispatcher and `ProcessImport` recover from durable import state only. |
+| Vertical slice order | 1. Return a same-tenant duplicate-content result that references the original import without exposing another tenant. 2. Recover a pending outbox record after broker failure. 3. Recover a transient worker failure from durable checkpoints without duplicate products, row outcomes, or lifecycle audit events. 4. Present duplicate and recovery history in the existing import detail feature. |
+| Red tests and focused commands | `test_same_tenant_duplicate_upload_returns_original_import_without_new_effective_state`: `pytest tests/integration/api/test_import_routes.py -q`. `test_dispatcher_retries_pending_outbox_after_publish_failure`: `pytest tests/integration/worker/test_import_dispatch.py -q`. `test_process_import_recovery_is_idempotent_after_transient_failure`: `pytest tests/integration/worker/test_import_tasks.py -q`. `test_import_feature_shows_duplicate_and_recovery_history`: `npm --prefix apps/web exec tsx --test src/features/imports/tests/imports.test.ts`. |
+| Green implementation | Add duplicate-content response semantics linking the original import, operation/lifecycle deduplication, retry classification, idempotent checkpoints, recovery status, and audit history presentation. |
+| Affected-suite verification | `pytest tests/unit/catalog_ingestion tests/integration/api/test_import_routes.py tests/integration/worker/test_import_dispatch.py tests/integration/worker/test_import_tasks.py tests/integration/persistence/test_import_persistence.py -q`; `npm --prefix apps/web run test`; `npm --prefix apps/web run typecheck`; `python tools/architecture/check_boundaries.py`; `git diff --check`. |
+| Customer validation | Re-upload the exact file and see the original import referenced with no new effective product changes; inject one transient failure, retry, and see one terminal outcome with clear lifecycle history. |
+| Tenant/authorization | Duplicate scope never exposes whether Tenant A owns a matching hash; workers verify payload tenant against durable import metadata before read/write. |
+| Audit/idempotency | Duplicate attempts may have one safe attempt record only when approved by the audit contract; effective product and lifecycle audit events remain exactly once. |
+| Merge dependency | M3-01. M3-02 may merge independently; resolve normal import-feature conflicts conventionally. |
 
-## Vertical 2: Mixed-Validity Import Reaches Partial Status
+## M3-04: Real-Data Acceptance Evidence Completes M3
 
-Customer outcome: a catalog manager uploads a mixed-validity file, valid rows are retained, invalid rows show safe row-level reasons, and the import reaches `partial`.
-
-### M3-04: Row Outcome and Failure Reason Model
-
-| Field | Plan |
-| --- | --- |
-| Owner | Backend owner. |
-| Permitted files | `apps/api/src/commerce_ai_api/modules/catalog_ingestion/**`, `tests/unit/catalog_ingestion/**`, `tests/integration/persistence/**`, `tests/integration/api/**`. |
-| Approved seam | `catalog_ingestion` owns import rows, row outcomes, safe reason codes, and source references. |
-| Red test | Mixed fixture fails because row outcomes and safe reason codes are not persisted or exposed. |
-| Green implementation | Persist accepted/rejected/quarantined row outcomes, source row references, safe reason codes, and counts that satisfy row conservation. |
-| Customer end-to-end validation | Import status shows accepted/rejected/quarantined counts and per-row reasons without raw sensitive content leakage. |
-| Tenant/authorization implications | Row lookup requires tenant-scoped import ownership and import-read capability. |
-| Audit/idempotency implications | Partial status transition and row summaries are audit-worthy; retry cannot duplicate row outcomes. |
-| Merge dependency | M3-03. |
-
-### M3-05: Partial Import UI and Status Contract
+**Customer outcome:** The team can truthfully show what real frozen source data was imported, what happened to every row, which holdout results passed or failed, and which claims are supported.
 
 | Field | Plan |
 | --- | --- |
-| Owner | Frontend/backend owner. |
-| Permitted files | `apps/api/src/commerce_ai_api/modules/catalog_ingestion/**`, `apps/api/src/commerce_ai_api/api/routes/**`, `apps/web/src/**`, `tests/integration/api/**`, `tests/e2e/**`. |
-| Approved seam | Frontend calls catalog-ingestion API client only; backend route calls status/query use case only. |
-| Red test | UI/API cannot distinguish `partial` from `failed` or show row-level safe reasons. |
-| Green implementation | Add status response, row-failure pagination, partial-success UI state, retry affordance, and error/empty/loading states. |
-| Customer end-to-end validation | User can inspect why invalid rows failed while valid products remain available. |
-| Tenant/authorization implications | Browser authorization hints are display only; server enforces tenant and role. |
-| Audit/idempotency implications | UI displays audit/history references from PostgreSQL, not task results. |
-| Merge dependency | M3-04. |
+| Owner | Evaluation/data-validation owner. |
+| Permitted files | `datasets/manifests/**`, permitted tiny fixtures, `docs/evidence/**`, `tests/evaluation/**`, import/evaluation acceptance tooling, and `apps/api/src/commerce_ai_api/modules/evaluation/**` only when required by the existing evaluation contract. |
+| Approved seam | Manifests and evidence runs reference immutable artifact hashes/version references and execute through the real API/UI, outbox, worker, and tenant-scoped persistence contracts. Normal CI never downloads external data. |
+| Vertical slice order | 1. Reject an incomplete manifest or evidence record. 2. Run the frozen tiny resilience corpus through the real import path and assert row conservation, duplicate replay, recovery, and tenant isolation. 3. Run an acquired holdout through the same path outside normal CI and emit machine-readable metrics plus a human-readable report. |
+| Red tests and focused commands | `test_import_evidence_manifest_rejects_missing_required_provenance_or_result_fields`: `pytest tests/evaluation/test_import_evidence_manifest.py -q`. `test_import_acceptance_run_records_row_conservation_recovery_and_isolation`: `pytest tests/evaluation/test_import_acceptance.py -q`. |
+| Green implementation | Add manifest validation, reviewed golden labels, controlled acceptance runner, machine-readable metrics, immutable evidence references, and a human-readable report. |
+| Affected-suite verification | `pytest tests/evaluation -q`; `python tools/architecture/check_boundaries.py`; `git diff --check`. The controlled acquired-data command is documented with its manifest ID and is never a normal CI requirement. |
+| Customer validation | A reviewer follows the documented acceptance procedure and can inspect real-source versus resilience versus holdout results, limitations, failures, and supported claims. |
+| Tenant/authorization | Acceptance uses a target tenant and isolation tenant; cross-tenant import, artifact, product, row, audit, and retrieval counts must be zero. |
+| Audit/idempotency | Evidence records duplicate replay effective-product/audit counts and recovery outcome; failed evidence remains immutable rather than rewritten. |
+| Merge dependency | M3-01, M3-02, M3-03, and an acquired manifest with verified facts. |
 
-## Vertical 3: Duplicate Upload and Retry Remain Idempotent
+## Merge and Team Sequence
 
-Customer outcome: an exact duplicate upload or worker retry produces the original effective outcome, does not duplicate products or audit events, and leaves lifecycle evidence.
+```text
+ADR 0009 + ADR 0010
+        |
+      M3-01
+       /  \
+   M3-02  M3-03
+       \  /
+      M3-04
+```
 
-### M3-06: Duplicate Content Scope and Replay
-
-| Field | Plan |
-| --- | --- |
-| Owner | Backend owner. |
-| Permitted files | `apps/api/src/commerce_ai_api/modules/catalog_ingestion/**`, `tests/unit/catalog_ingestion/**`, `tests/integration/api/**`, `tests/integration/persistence/**`. |
-| Approved seam | PostgreSQL unique constraints and `CreateImport` use case enforce duplicate-content scope. |
-| Red test | Re-uploading the same bytes in the same tenant creates duplicate effective products or audit events. |
-| Green implementation | Add duplicate-content detection, response semantics, unique constraints, and replay-safe lifecycle audit. |
-| Customer end-to-end validation | User re-uploads the same file and sees documented duplicate result with link/reference to original import outcome. |
-| Tenant/authorization implications | Duplicate scope is tenant-approved; Tenant B cannot infer Tenant A content hash or import existence. |
-| Audit/idempotency implications | Duplicate replay records at most the approved duplicate-attempt evidence and zero duplicate effective product/audit mutations. |
-| Merge dependency | M3-03. |
-
-### M3-07: Worker Retry and Failure Recovery
-
-| Field | Plan |
-| --- | --- |
-| Owner | Worker/backend owner. |
-| Permitted files | `apps/api/src/commerce_ai_api/modules/catalog_ingestion/**`, `apps/worker/src/commerce_ai_worker/**`, `tests/integration/worker/**`, `tests/unit/catalog_ingestion/**`. |
-| Approved seam | Celery task calls `ProcessImport`; use case reads durable state and object-storage bytes; task result is not authority. |
-| Red test | Simulated crash after row persistence or artifact read causes duplicate rows/products/audit events on retry. |
-| Green implementation | Add idempotent checkpoints, retry classification, provider transient error handling, object missing/mismatch failure states, and lifecycle audit evidence. |
-| Customer end-to-end validation | Interrupted import resumes or reaches safe retryable/failed status with clear audit history and no duplicate effective changes. |
-| Tenant/authorization implications | Worker validates tenant ID against import metadata before artifact read or product write. |
-| Audit/idempotency implications | Every retry uses operation/import IDs; audit events are deduplicated by operation and lifecycle phase. |
-| Merge dependency | M3-06. |
-
-## Vertical 4: Real-Data and Holdout Acceptance Evidence Completes M3
-
-Customer outcome: M3 can make honest evidence-backed claims about import behavior on frozen real-source and holdout data.
-
-### M3-08: Source Manifest and Golden Labels
-
-| Field | Plan |
-| --- | --- |
-| Owner | Evaluation/data owner. |
-| Permitted files | `datasets/manifests/**`, `datasets/fixtures/**`, `docs/evidence/**`, `docs/architecture/data-validation-and-evidence-contract.md`, `tests/evaluation/**`. |
-| Approved seam | Data-validation manifests record acquisition facts; no runtime code downloads external corpora during CI. |
-| Red test | Manifest validation fails when publisher, source URL, retrieval date, licence/terms, attribution, hash, bytes, row count, reviewer, split, labels, or thresholds are missing. |
-| Green implementation | Add schema/checks for manifests and golden-label metadata using only acquired facts. |
-| Customer end-to-end validation | Reviewer can see which data was used, under what rights, and what expected row outcomes were reviewed. |
-| Tenant/authorization implications | Customer/private data is excluded unless written permission and handling rules are recorded. |
-| Audit/idempotency implications | Manifest hash links acceptance runs to immutable artifact hashes and import IDs. |
-| Merge dependency | M3-01 decisions; do not invent Open Icecat facts. |
-
-### M3-09: Acceptance Runs and Evidence Bundle
-
-| Field | Plan |
-| --- | --- |
-| Owner | Evaluation/backend owner. |
-| Permitted files | `docs/evidence/**`, `datasets/manifests/**`, `tests/evaluation/**`, `tests/integration/api/**`, `tests/integration/worker/**`, `apps/api/src/commerce_ai_api/modules/evaluation/**` when introduced. |
-| Approved seam | Acceptance runs go through user-facing API/UI and real worker path; evidence metadata persists through approved evaluation/import contracts. |
-| Red test | Evidence report generation fails without row conservation, replay, retry/recovery, tenant isolation, holdout result, artifact hashes, app commit, and correlation/operation IDs. |
-| Green implementation | Add acceptance runner/reporting that records immutable evidence bundle references and produces a human-readable report. |
-| Customer end-to-end validation | M3 report answers what was imported, what failed, what was normalized, whether duplicates/retries/tenant isolation held, and what claims are supported. |
-| Tenant/authorization implications | Acceptance includes target tenant and isolation tenant; cross-tenant artifact/import/product/audit count must be zero. |
-| Audit/idempotency implications | Evidence records duplicate replay effective-product count and effective-audit-event count as zero for passing runs. |
-| Merge dependency | M3-04, M3-06, M3-07, and completed source manifest/golden labels. |
+M3-02 and M3-03 are the only parallel implementation PRs. Each starts from merged M3-01, owns one customer outcome, and may resolve ordinary import-feature conflicts during merge. No task may replace an end-to-end customer path with a mock, direct database insertion, or fixture-only success claim.

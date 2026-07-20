@@ -44,7 +44,7 @@ Later MCP/agent gateway --------> authorized API/application use cases only
 | Web | presentation, interaction state, route composition, accessible operational workflows | authorization decisions, durable workflow state, business mutation logic |
 | API | HTTP contract, authentication resolution, authorization entry point, use-case invocation | direct UI state, long-running processing, unscoped persistence access |
 | Worker | task delivery, retry policy, durable asynchronous use-case invocation | alternate business workflows, direct domain-table mutation |
-| PostgreSQL | authoritative business state, constraints, idempotency records, workflow states, audit, evaluation runs | disposable cache or vector-only state |
+| PostgreSQL | authoritative business state, constraints, idempotency records, workflow states, audit, evaluation runs, and durable task-dispatch outbox records | disposable cache or vector-only state |
 | Redis | broker/backend and short-lived coordination | authoritative catalog, approval, audit, or tenant state |
 | Qdrant | tenant-filtered vector projections and retrieval scores | canonical product state or approval state |
 | Object storage | immutable original upload artifacts and large evaluation artifacts through the ADR 0009 S3-compatible adapter | catalog metadata, import state, row outcomes, idempotency, audit, authorization, or mutable workflow authority |
@@ -59,7 +59,7 @@ The canonical backend domains are `identity`, `tenancy`, `catalog_ingestion`, `n
 | --- | --- | --- |
 | identity | users, credentials, sessions | tenancy contracts |
 | tenancy | tenants, memberships, roles, tenant context | identity contracts |
-| catalog_ingestion | sources, imports, rows, content hashes, import state machine | tenancy, normalization and catalog use-case contracts |
+| catalog_ingestion | sources, import reservations, imports, immutable artifact metadata, rows, content hashes, import state machine, durable dispatch outbox | tenancy, normalization and catalog use-case contracts |
 | normalization | source-to-normalized transformation rules and outcomes | no catalog persistence |
 | catalog | supplier products, canonical products, variants, product provenance | tenancy contracts |
 | retrieval | lexical query composition, index projections, fusion, search evidence | catalog read contracts, AI embedding contracts |
@@ -95,7 +95,7 @@ Supplier files, browser requests, model output, retrieved content, and MCP argum
 
 ### Ingestion
 
-`POST import` records an import intent and content hash in PostgreSQL, stores the original artifact through the approved S3-compatible adapter, records artifact metadata, then enqueues a task using only durable IDs and tenant context. The task invokes the ingestion use case, which transitions durable state, records row outcomes, and schedules downstream work. A retry reads current PostgreSQL state, verifies immutable artifact bytes by hash/size when needed, and produces no duplicate effective product changes.
+`POST import` invokes `CreateImport`, which commits a PostgreSQL reservation before any storage call. It conditionally stores the original artifact through the approved S3-compatible adapter and then atomically commits artifact metadata, `artifact_stored -> queued`, an initial audit event, and an import-dispatch outbox record under [ADR 0010](adr/0010-durable-import-dispatch-outbox.md). If the metadata transaction fails after storage, retry verifies the reservation's deterministic key/hash/size and records the observed provider version before continuing. The dispatcher publishes only durable IDs and tenant context. The task invokes the ingestion use case, which transitions durable state, records row outcomes, and schedules downstream work. A retry reads current PostgreSQL state, verifies the recorded immutable artifact version by key/hash/size when needed, and produces no duplicate effective product changes.
 
 ### Indexing and search
 

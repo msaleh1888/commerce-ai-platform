@@ -178,6 +178,8 @@ Use an S3-compatible object-storage abstraction for immutable original catalog u
 
 PostgreSQL remains authoritative for import records, artifact metadata, content hashes, workflow state, row outcomes, idempotency records, audit references, and evaluation run records. Object storage holds immutable bytes only.
 
+Import state transitions that require Celery delivery use the PostgreSQL transactional outbox in [ADR 0010](adr/0010-durable-import-dispatch-outbox.md). Redis delivers tasks but never decides whether an import should be processed.
+
 This decision is governed by [ADR 0009](adr/0009-s3-compatible-import-artifact-storage.md).
 
 ### Alternatives Considered

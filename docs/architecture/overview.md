@@ -64,8 +64,8 @@ PostgreSQL owns business state. S3-compatible object storage stores immutable or
 ## Data Flow
 
 1. User submits catalog import through the web app.
-2. API validates request, stores immutable original bytes through the object-storage adapter, records import/artifact metadata in PostgreSQL, and enqueues work.
-3. Worker reloads tenant-scoped import metadata, verifies artifact bytes when needed, parses rows, validates schema, and stores raw and normalized product data.
+2. API commits an import reservation, conditionally stores immutable original bytes through the object-storage adapter, then atomically records import/artifact metadata, audit history, and a PostgreSQL outbox record.
+3. The dispatcher publishes the durable outbox record; the worker reloads tenant-scoped import metadata, verifies the recorded artifact version when needed, parses rows, validates schema, and stores raw and normalized product data.
 4. Worker generates retrieval records and writes them to Qdrant after PostgreSQL commits.
 5. Worker generates duplicate candidates and review cases.
 6. User searches products through the API; retrieval is tenant-filtered.
