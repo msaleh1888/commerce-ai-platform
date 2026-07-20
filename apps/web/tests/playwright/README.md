@@ -13,4 +13,4 @@ Run the smoke suite:
 npm run test:smoke:screenshots
 ```
 
-The suite starts the existing Next.js app with `next dev` on an isolated Playwright port. Generated screenshots, traces, videos, reports, and test results are written under `tests/playwright/.artifacts/` and are intentionally ignored.
+The suite starts and owns an isolated Next.js server on the Playwright port. It uses `.next-playwright` rather than the normal `.next` directory, so it does not reuse a developer server or contend with a local development build. Generated screenshots, traces, videos, reports, and test results are written under `tests/playwright/.artifacts/` and are intentionally ignored.

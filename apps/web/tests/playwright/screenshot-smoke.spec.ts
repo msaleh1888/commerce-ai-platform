@@ -77,6 +77,10 @@ async function waitForReview(page: Page) {
   await expect(page.getByRole("heading", { level: 1, name: "Review queue" })).toBeVisible();
   await expectVisibleText(page, "Northstar Retail");
   await expect(page.getByText(/Northstar Retail \/ (Catalog Manager|catalog_manager) \/ \d+ unresolved cases/)).toBeVisible();
+  await expect(page.getByText("Selected rev_ns_dup_sony_wh1000xm5_001", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('[aria-label="Selected review case detail"]').getByText("unresolved", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Recommended proposal" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Human approval" })).toBeVisible();
   await expect(page.getByRole("button", { exact: true, name: "Approve merge" })).toBeVisible();

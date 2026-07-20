@@ -25,7 +25,10 @@ export default defineConfig({
   },
   webServer: {
     command: `npm run dev -- --hostname ${host} --port ${port}`,
-    reuseExistingServer: !process.env.CI,
+    env: {
+      NEXT_DIST_DIR: ".next-playwright",
+    },
+    reuseExistingServer: false,
     timeout: 120_000,
     url: baseURL,
   },
