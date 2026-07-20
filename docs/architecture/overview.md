@@ -88,6 +88,7 @@ The MVP begins with structured logs, health checks, task status, and basic metri
 - [Catalog Ingestion Contract](catalog-ingestion-contract.md)
 - [Retrieval and Indexing Contract](retrieval-and-indexing-contract.md)
 - [Duplicate Review and Approval Contract](duplicate-review-and-approval-contract.md)
+- [Data Validation and Evidence Contract](data-validation-and-evidence-contract.md)
 - [Evaluation Contract](evaluation-contract.md)
 - [AI, Agent, and MCP Contract](ai-agent-and-mcp-contract.md)
 - [Observability and Operations Contract](observability-and-operations-contract.md)
