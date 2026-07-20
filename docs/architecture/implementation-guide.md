@@ -16,10 +16,13 @@ When no approved rule applies, the implementer MUST stop and create or request a
 - A use case/service MUST NOT receive `Request`, `Response`, framework exceptions, or frontend types.
 - A repository MUST own persistence queries for one aggregate/read model and MUST require `tenant_id` for protected data access.
 - A repository MUST NOT contain authorization policy, HTTP behavior, task orchestration, model-provider calls, or cross-domain business workflow logic.
+- Provider adapters such as object storage MUST live behind an approved application-facing contract. Routes, worker tasks, and frontend code MUST NOT call provider SDKs directly.
+- Object storage MUST NOT be used as catalog metadata, import state, row outcome, audit, idempotency, authorization, or workflow authority. PostgreSQL remains authoritative for those records.
 - ORM models MUST remain persistence mappings. Pydantic schemas/DTOs MUST be used across API, task, and domain-contract boundaries.
 - A worker task MUST deserialize stable identifiers, tenant context, and operation ID; resolve a use case through the worker composition root; and call it.
 - A worker task MUST NOT query repositories/ORM models directly or implement business transitions itself.
 - Every durable state transition MUST have a named idempotency/operation key or a database constraint that makes duplicate effective execution impossible.
+- A durable state transition that requires asynchronous delivery MUST commit its transition, required audit event, and transactional outbox record in the same PostgreSQL transaction. A dispatcher use case publishes from that durable record; routes and worker tasks MUST NOT publish directly to the broker.
 
 ## Frontend
 

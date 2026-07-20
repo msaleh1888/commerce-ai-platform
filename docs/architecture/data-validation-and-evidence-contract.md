@@ -9,7 +9,7 @@ It prevents two failures:
 - treating a successful parse or a unit test as proof that real catalog data works; and
 - presenting fabricated, altered, unlicensed, or unversioned data as real-world validation.
 
-This contract is subordinate to the Final Target Architecture, the Catalog Ingestion Contract, the Evaluation Contract, ADR 0006, and the Observability and Operations Contract.
+This contract is subordinate to the Final Target Architecture, the Catalog Ingestion Contract, the Evaluation Contract, ADR 0006, ADR 0009, and the Observability and Operations Contract.
 
 ## Scope and Non-Goals
 
@@ -56,7 +56,7 @@ No external data enters a validation corpus until a maintainer records all of th
 - SHA-256 hash, byte size, row count, and original filename for every acquired artifact; and
 - the named maintainer who reviewed the source.
 
-Raw external data is never committed to Git unless the licence explicitly permits redistribution and the file is small enough for repository policy. Raw private/customer data, access credentials, cookies, and tokens are never committed. Large frozen artifacts use the approved external-artifact location; Git stores only manifests, acquisition instructions, hashes, permitted tiny fixtures, and derived aggregate reports.
+Raw external data is never committed to Git unless the licence explicitly permits redistribution and the file is small enough for repository policy. Raw private/customer data, access credentials, cookies, and tokens are never committed. Large frozen artifacts use the approved S3-compatible artifact storage path from [ADR 0009](adr/0009-s3-compatible-import-artifact-storage.md) after the acquisition-time location is recorded in the manifest; Git stores only manifests, acquisition instructions, hashes, permitted tiny fixtures, and derived aggregate reports.
 
 An unlicensed, scraped, unverifiable, or undocumented dataset is inadmissible. A source with unclear rights is rejected until the legal/provenance gate is completed.
 
@@ -141,7 +141,7 @@ Each resilience fixture records its parent manifest hash and transformation scri
 Before an acceptance run:
 
 1. Use the pinned application commit, migration revision, Compose configuration, manifest version, and seed version recorded in the run record.
-2. Start a clean local/staging environment with PostgreSQL, Redis, API, worker, and configured artifact storage ready.
+2. Start a clean local/staging environment with PostgreSQL, Redis, API, worker, and configured S3-compatible artifact storage ready.
 3. Create two tenant contexts: one target tenant and one isolation tenant.
 4. Confirm the target user has the import capability and the isolation user has no membership in the target tenant.
 5. Record correlation IDs and operation IDs for every upload and replay.
@@ -231,4 +231,4 @@ Real-source and holdout acceptance runs execute locally or in a controlled sched
 
 ## Decision Needed Before Implementation
 
-Before M3 data acquisition begins, record the chosen Open Icecat access path, its exact licence/attribution terms, the approved external-artifact location, the first corpus size, and the corpus-specific quality thresholds in the first M3 manifest. Those facts cannot be invented by an implementation agent.
+Before M3 data acquisition begins, record the chosen Open Icecat access path, its exact licence/attribution terms, the acquisition-time artifact location within the approved S3-compatible storage boundary, the first corpus size, and the corpus-specific quality thresholds in the first M3 manifest. Those facts cannot be invented by an implementation agent.

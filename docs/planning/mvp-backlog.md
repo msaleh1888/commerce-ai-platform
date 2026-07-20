@@ -116,6 +116,10 @@ Goal:
 
 - Upload catalog files, process asynchronously, normalize rows, expose status, and persist audit events.
 
+Implementation planning:
+
+- [M3 Catalog Import Implementation Plan](m3-catalog-import-implementation-plan.md)
+
 ### M4: Product Browser and Search Baseline
 
 Goal:
@@ -576,6 +580,8 @@ type:backend, type:worker, type:frontend, area:ingestion, priority:p0
 Description:
 
 Build the first real vertical slice: catalog import UI, API, database records, worker processing, normalization, row errors, import status, and audit events.
+
+Use [M3 Catalog Import Implementation Plan](m3-catalog-import-implementation-plan.md) to split implementation into vertical customer outcomes.
 
 Acceptance criteria:
 
