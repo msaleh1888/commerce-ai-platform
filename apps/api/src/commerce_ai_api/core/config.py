@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://commerce_ai:commerce_ai@localhost:5432/commerce_ai"
     redis_url: str = "redis://localhost:6379/0"
     qdrant_url: str = "http://localhost:6333"
+    import_artifact_endpoint_url: str = "http://localhost:9000"
+    import_artifact_bucket: str = "commerce-ai-import-artifacts"
+    import_artifact_region: str = "us-east-1"
+    import_artifact_access_key: str = "commerce_ai"
+    import_artifact_secret_key: str = "commerce_ai_minio_password"
+    import_artifact_use_tls: bool = False
     web_origin: str = "http://localhost:3000"
     session_cookie_name: str = "commerce_ai_session"
 

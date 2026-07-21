@@ -35,6 +35,35 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  minio:
+    image: minio/minio:RELEASE.2026-07-13T20-10-22Z
+    environment:
+      MINIO_ROOT_USER: commerce_ai
+      MINIO_ROOT_PASSWORD: commerce_ai_minio_password
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - minio_data:/data
+
+  minio-provision:
+    image: minio/mc:RELEASE.2026-07-16T15-35-03Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      [
+        "/bin/sh",
+        "-c",
+        "mc alias set local http://minio:9000 commerce_ai commerce_ai_minio_password && mc mb --ignore-existing local/commerce-ai-import-artifacts && mc version enable local/commerce-ai-import-artifacts",
+      ]
+
   api:
     build:
       context: .
@@ -44,6 +73,13 @@ services:
       COMMERCE_AI_DATABASE_URL: postgresql+psycopg://commerce_ai:commerce_ai@postgres:5432/commerce_ai
       COMMERCE_AI_REDIS_URL: redis://redis:6379/0
       COMMERCE_AI_QDRANT_URL: http://qdrant:6333
+      COMMERCE_AI_IMPORT_ARTIFACT_ENDPOINT_URL: http://minio:9000
+      COMMERCE_AI_IMPORT_ARTIFACT_BUCKET: commerce-ai-import-artifacts
+      COMMERCE_AI_IMPORT_ARTIFACT_REGION: us-east-1
+      COMMERCE_AI_IMPORT_ARTIFACT_ACCESS_KEY: commerce_ai
+      COMMERCE_AI_IMPORT_ARTIFACT_SECRET_KEY: commerce_ai_minio_password
+      COMMERCE_AI_IMPORT_ARTIFACT_USE_TLS: "false"
+      COMMERCE_AI_DEMO_SEED_PASSWORD: local-only-test-password
     ports:
       - "8000:8000"
     depends_on:
@@ -53,16 +89,15 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
+      minio:
+        condition: service_healthy
+      minio-provision:
+        condition: service_completed_successfully
     command:
       [
-        "python",
-        "-m",
-        "uvicorn",
-        "commerce_ai_api.main:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8000",
+        "/bin/sh",
+        "-c",
+        "alembic -c apps/api/alembic.ini upgrade head && python -m commerce_ai_api.scripts.seed_demo --apply && python -m uvicorn commerce_ai_api.main:app --host 0.0.0.0 --port 8000",
       ]
     healthcheck:
       test:
@@ -81,12 +116,25 @@ services:
     environment:
       COMMERCE_AI_WORKER_ENVIRONMENT: docker
       COMMERCE_AI_WORKER_BROKER_URL: redis://redis:6379/0
+      COMMERCE_AI_WORKER_DATABASE_URL: postgresql+psycopg://commerce_ai:commerce_ai@postgres:5432/commerce_ai
       COMMERCE_AI_WORKER_RESULT_BACKEND: redis://redis:6379/1
       COMMERCE_AI_WORKER_TASK_DEFAULT_QUEUE: commerce_ai
+      COMMERCE_AI_IMPORT_ARTIFACT_ENDPOINT_URL: http://minio:9000
+      COMMERCE_AI_IMPORT_ARTIFACT_BUCKET: commerce-ai-import-artifacts
+      COMMERCE_AI_IMPORT_ARTIFACT_REGION: us-east-1
+      COMMERCE_AI_IMPORT_ARTIFACT_ACCESS_KEY: commerce_ai
+      COMMERCE_AI_IMPORT_ARTIFACT_SECRET_KEY: commerce_ai_minio_password
+      COMMERCE_AI_IMPORT_ARTIFACT_USE_TLS: "false"
     depends_on:
       redis:
         condition: service_healthy
       postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-provision:
+        condition: service_completed_successfully
+      api:
         condition: service_healthy
     command:
       [
@@ -115,3 +163,4 @@ services:
 volumes:
   postgres_data:
   qdrant_data:
+  minio_data:

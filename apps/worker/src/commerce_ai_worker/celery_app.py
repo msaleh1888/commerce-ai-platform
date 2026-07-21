@@ -9,7 +9,7 @@ def create_celery_app(settings: WorkerSettings | None = None) -> Celery:
         "commerce_ai_worker",
         broker=settings.broker_url,
         backend=settings.result_backend,
-        include=["commerce_ai_worker.tasks.health"],
+        include=["commerce_ai_worker.tasks.health", "commerce_ai_worker.tasks.imports"],
     )
     app.conf.update(
         broker_connection_retry_on_startup=True,

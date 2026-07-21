@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test src/styles/tokens.test.mjs && node --test src/components/ui/ui-primitives.test.mjs && node --test src/components/layout/app-shell.test.mjs && node --test src/features/review/tests/review-boundaries.test.mjs && tsx --test src/features/demo-data/tests/demo-data.test.ts && tsx --test src/features/dashboard/tests/dashboard.test.ts && tsx --test src/features/review/tests/review.test.ts",
+    "test": "node --test src/styles/tokens.test.mjs && node --test src/components/ui/ui-primitives.test.mjs && node --test src/components/layout/app-shell.test.mjs && node --test src/features/review/tests/review-boundaries.test.mjs && tsx --test src/features/demo-data/tests/demo-data.test.ts && tsx --test src/features/dashboard/tests/dashboard.test.ts && tsx --test src/features/review/tests/review.test.ts && tsx --test src/features/imports/tests/imports.test.ts",
     "test:smoke:screenshots": "node scripts/run-playwright-screenshot-smoke.mjs",
     "typecheck": "tsc --noEmit --incremental false"
   },

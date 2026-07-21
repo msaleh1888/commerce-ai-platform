@@ -1,0 +1,1 @@
+"""Catalog ingestion provider adapters."""

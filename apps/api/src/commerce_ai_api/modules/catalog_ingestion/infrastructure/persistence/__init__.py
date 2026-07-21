@@ -1,0 +1,1 @@
+"""Catalog ingestion persistence implementations."""

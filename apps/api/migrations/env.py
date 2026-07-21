@@ -5,6 +5,8 @@ from sqlalchemy import engine_from_config, pool
 
 from commerce_ai_api.core.config import get_settings
 from commerce_ai_api.db.base import Base
+from commerce_ai_api.modules.catalog.infrastructure.persistence import models as catalog_models
+from commerce_ai_api.modules.catalog_ingestion.infrastructure.persistence import models as import_models
 from commerce_ai_api.modules.identity.infrastructure.persistence import models as identity_models
 from commerce_ai_api.modules.tenancy.infrastructure.persistence import models as tenancy_models
 
@@ -13,7 +15,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-_ = (identity_models, tenancy_models)
+_ = (catalog_models, import_models, identity_models, tenancy_models)
 
 target_metadata = Base.metadata
 

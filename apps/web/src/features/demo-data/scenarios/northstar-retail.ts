@@ -8,6 +8,7 @@ const northstarTenant = {
 
 const catalogManagerCapabilities = [
   "catalog.import:create",
+  "catalog.import:read",
   "catalog.product:read",
   "catalog.review:read",
   "catalog.review:decide",
