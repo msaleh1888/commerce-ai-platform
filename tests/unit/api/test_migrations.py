@@ -24,7 +24,7 @@ def test_runtime_service_urls_are_environment_driven(monkeypatch) -> None:
 def test_alembic_has_single_current_head() -> None:
     script_directory = ScriptDirectory.from_config(get_alembic_config())
 
-    assert script_directory.get_heads() == ["20260718_0002"]
+    assert script_directory.get_heads() == ["20260720_0003"]
 
 
 def test_migrations_validate_without_database_connection() -> None:

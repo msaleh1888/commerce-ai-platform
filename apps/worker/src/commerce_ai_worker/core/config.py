@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class WorkerSettings(BaseSettings):
     environment: str = "local"
     broker_url: str = "redis://localhost:6379/0"
+    database_url: str = "postgresql+psycopg://commerce_ai:commerce_ai@localhost:5432/commerce_ai"
     result_backend: str = "redis://localhost:6379/1"
     task_default_queue: str = "commerce_ai"
     task_always_eager: bool = False

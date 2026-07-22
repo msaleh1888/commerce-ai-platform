@@ -4,7 +4,7 @@ import path from "node:path";
 
 type SmokeScenario = {
   readonly name: string;
-  readonly path: "/dashboard" | "/review";
+  readonly path: "/dashboard" | "/review" | "/imports";
   readonly screenshotName: string;
   readonly viewport: {
     readonly width: number;
@@ -39,6 +39,18 @@ const scenarios: readonly SmokeScenario[] = [
     screenshotName: "review-mobile-390x844.png",
     viewport: { width: 390, height: 844 },
   },
+  {
+    name: "imports desktop",
+    path: "/imports",
+    screenshotName: "imports-desktop-1440x1024.png",
+    viewport: { width: 1440, height: 1024 },
+  },
+  {
+    name: "imports mobile",
+    path: "/imports",
+    screenshotName: "imports-mobile-390x844.png",
+    viewport: { width: 390, height: 844 },
+  },
 ];
 
 test.describe("M2 screenshot smoke coverage", () => {
@@ -49,8 +61,10 @@ test.describe("M2 screenshot smoke coverage", () => {
 
       if (scenario.path === "/dashboard") {
         await waitForDashboard(page);
-      } else {
+      } else if (scenario.path === "/review") {
         await waitForReview(page);
+      } else {
+        await waitForImports(page);
       }
 
       await assertNoHorizontalOverflow(page);
@@ -71,6 +85,13 @@ async function waitForDashboard(page: Page) {
   await expect(page.getByRole("heading", { name: "Recent imports" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Review queue" })).toBeVisible();
   await expect(page.getByText(/Loading|could not be loaded|Permission denied|No catalog operations yet/i)).toHaveCount(0);
+}
+
+async function waitForImports(page: Page) {
+  await expect(page.getByRole("heading", { name: "Supplier Imports" })).toBeVisible();
+  await expectVisibleText(page, "Northstar Retail");
+  await expect(page.getByText("No supplier import has been selected.")).toBeVisible();
+  await expect(page.getByText(/Permission required|Import unavailable/i)).toHaveCount(0);
 }
 
 async function waitForReview(page: Page) {

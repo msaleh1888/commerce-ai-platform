@@ -16,6 +16,7 @@ class Role(StrEnum):
 READ_CAPABILITIES = frozenset(
     {
         "catalog.product:read",
+        "catalog.import:read",
         "catalog.review:read",
         "evaluation.run:read",
         "audit.event:read",

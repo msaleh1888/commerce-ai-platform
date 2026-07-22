@@ -9,8 +9,7 @@ COPY pyproject.toml ./
 COPY apps/api ./apps/api
 COPY apps/worker ./apps/worker
 
-RUN python -m pip install --no-cache-dir --upgrade pip \
-    && python -m pip install --no-cache-dir -e ".[dev]"
+RUN python -m pip install --no-cache-dir --timeout 120 --retries 5 -e ".[dev]"
 
 RUN useradd --create-home --shell /usr/sbin/nologin appuser
 USER appuser
